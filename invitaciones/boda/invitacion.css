@@ -23,11 +23,15 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
+/* Nada puede salirse a los lados: en celular, un elemento más ancho que la pantalla
+   (p. ej. una foto esperando su animación de AOS) agranda la página y descentra el sobre. */
+html { overflow-x: hidden; }
+body { overflow-x: clip; }
 body {
   margin: 0; color: var(--tinta); background: var(--papel);
   font-family: "Montserrat", sans-serif; font-weight: 300; line-height: 1.6;
-  overflow-x: hidden;
 }
+.escena, .dividida, .banda, .galeria, .pie { overflow: hidden; overflow: clip; }
 body.cerrado { overflow: hidden; }
 img { display: block; }
 
