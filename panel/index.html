@@ -60,7 +60,10 @@
         <h1>Panel de invitados</h1>
         <div class="sub" id="actualizado"></div>
       </div>
-      <button class="btn" id="recargar" type="button">Actualizar</button>
+      <div class="acciones">
+        <button class="btn" id="recargar" type="button">Actualizar</button>
+        <button class="btn" id="salir" type="button">Salir</button>
+      </div>
     </header>
 
     <section class="kpis">
@@ -211,6 +214,16 @@
       cargar();
     });
     $("recargar").addEventListener("click", cargar);
+    // Salir: olvida la clave y vuelve a pedirla.
+    $("salir").addEventListener("click", () => {
+      clave = "";
+      filas = [];
+      try { sessionStorage.removeItem(CLAVE_KEY); } catch {}
+      $("filas").innerHTML = "";
+      $("clave").value = "";
+      mostrarLogin("");
+      $("clave").focus();
+    });
     $("buscar").addEventListener("input", render);
     document.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => {
       filtro = b.dataset.filtro;
