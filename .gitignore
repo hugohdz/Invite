@@ -4,3 +4,4 @@ datos/confirmaciones.txt
 
 __pycache__/
 *.pyc
+datos/invitados_para_google.csv

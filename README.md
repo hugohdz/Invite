@@ -8,28 +8,19 @@
 
 | Qué | Dónde |
 | --- | --- |
-| Nombres, fecha, lugares, itinerario, WhatsApp, tema | `datos/evento.json` |
-| Invitados: `id \| nombre \| pases \| teléfono` | `datos/invitados.txt` (**no se sube**: queda solo en tu PC) |
-| Fotos (se muestran en orden: 1.jpg = portada, 2.jpg = cuenta regresiva…) | `fotos/` |
+| Nombres, fecha, lugares, itinerario, WhatsApp, tema | `datos/evento.json` (requiere subir cambios) |
+| **Invitados**: `id \| nombre \| pases \| telefono` | Hoja **"Invitados"** del archivo de Google Sheets (**sin publicar nada**) |
+| Confirmaciones | Hoja "Confirmaciones" (la llena la invitación sola) |
+| Fotos (1.jpg = portada, 2.jpg = cuenta regresiva…) | `fotos/` + `python publicar.py` y subir cambios |
 
-Después de cambiar invitados o fotos, regenera los archivos públicos y sube los cambios:
+El enlace de cada invitado es `https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>`.
+Usa ids difíciles de adivinar (p. ej. `k7m2`) para que nadie vea otras invitaciones cambiando el número.
 
-```
-python publicar.py
-git add -A
-git commit -m "Actualizar invitados y fotos"
-git push
-```
+## Google Sheets
 
-`publicar.py` crea `datos/invitados.json` (solo id, nombre y pases, **sin teléfonos**) y `datos/fotos.json`.
-
-## Confirmaciones en GitHub Pages (Google Sheets)
-
-GitHub Pages no ejecuta Python, así que las confirmaciones se guardan en una hoja de Google:
-
-1. Sigue los pasos al inicio de `google-apps-script/Codigo.gs`.
-2. Pega la URL `/exec` en `datos/evento.json` como `"confirmacionesUrl"`.
-3. Sube el cambio. El panel (`panel/`) pedirá la clave que pusiste en `CLAVE_PANEL`.
+El código está en `google-apps-script/Codigo.gs` (instrucciones al inicio del archivo).
+Cada vez que cambie: pégalo en Extensiones > Apps Script, conserva tu `CLAVE_PANEL` y
+publica una **Nueva versión** en Implementar > Gestionar implementaciones (la URL no cambia).
 
 ## Uso local
 

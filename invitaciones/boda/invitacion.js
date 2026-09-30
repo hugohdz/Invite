@@ -63,18 +63,30 @@
     if (!publicado()) {
       try { return await obtener(`${RAIZ}api/invitado?id=${encodeURIComponent(id)}`); }
       catch { /* sin servidor (p. ej. GitHub Pages aún sin Google Sheets): usa invitados.json */ }
+      return buscarEnJson(id);
     }
-    const lista = await obtener(`${RAIZ}datos/invitados.json`);
-    const inv = lista.find((x) => String(x.id) === id);
+    // Publicado: la hoja "Invitados" de Google Sheets es la lista oficial.
+    const r = await obtener(`${evento.confirmacionesUrl}?accion=invitado&id=${encodeURIComponent(id)}`);
+    if ("invitado" in r) return r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null;
+    // Script de Google anterior (sin hoja Invitados): usa invitados.json y pide solo la confirmación.
+    const inv = await buscarEnJson(id);
     if (!inv) return null;
-    if (!publicado()) return inv;
     try {
-      const r = await obtener(`${evento.confirmacionesUrl}?accion=estado&id=${encodeURIComponent(id)}`);
-      inv.confirmacion = r.confirmacion || null;
+      const est = await obtener(`${evento.confirmacionesUrl}?accion=estado&id=${encodeURIComponent(id)}`);
+      inv.confirmacion = est.confirmacion || null;
     } catch {
       inv.confirmacion = null;
     }
     return inv;
+  }
+
+  async function buscarEnJson(id) {
+    try {
+      const lista = await obtener(`${RAIZ}datos/invitados.json`);
+      return lista.find((x) => String(x.id) === id) || null;
+    } catch {
+      return null;
+    }
   }
 
   async function guardarConfirmacion(datos) {
