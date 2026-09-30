@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Invitación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Bodoni+Moda:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+  <link rel="stylesheet" href="invitacion.css">
+</head>
+<body class="cerrado">
+  <!-- ===== Sobre de apertura ===== -->
+  <div id="sobre" class="sobre" role="button" tabindex="0" aria-label="Abrir invitación">
+    <div class="sobre-cuerpo"></div>
+    <div class="sobre-solapa"></div>
+    <button type="button" class="sello" aria-label="Abrir invitación">
+      <span id="sello-iniciales"></span>
+    </button>
+    <p class="sobre-hint" id="sobre-para">Toca el sello para abrir</p>
+  </div>
+
+  <!--
+    Estructura igual a la original:
+    - .escena   = foto de fondo FIJA (data-foto = qué foto usa) y el contenido deslizándose encima.
+                  La siguiente escena sube y tapa a la anterior, y su foto aparece desvaneciéndose.
+    - .dividida = foto a un costado y tarjeta con la información al otro (los lados se alternan).
+    - .banda    = franja de color con texto.
+    data-foto: "0" = 1.jpg, "1" = 2.jpg, ... "ultima" = la última foto de la carpeta.
+  -->
+  <main id="invitacion" class="invitacion">
+
+    <!-- 1. Portada: foto 1 + nombres -->
+    <section class="escena portada" id="inicio">
+      <div class="escena-fondo"><img data-foto="0" alt=""></div>
+      <div class="escena-frente portada-frente">
+        <div class="portada-textos" id="portada-textos">
+          <p class="eyebrow" id="txt-eyebrow"></p>
+          <h1 class="nombres"><span id="nombre1"></span><span class="amp">&amp;</span><span id="nombre2"></span></h1>
+          <p class="fecha-grande" id="fecha-larga"></p>
+        </div>
+        <div class="flecha" aria-hidden="true">⌄</div>
+      </div>
+    </section>
+
+    <!-- 2. Bienvenida -->
+    <section class="banda">
+      <p class="banda-texto" id="bienvenida" data-aos="fade-up"></p>
+    </section>
+
+    <!-- 3. Saludo personalizado (solo si el ?id= existe en la lista) -->
+    <section class="banda clara saludo" id="saludo" hidden>
+      <p class="eyebrow" data-aos="fade-down">Invitación para</p>
+      <p class="saludo-nombre" id="saludo-nombre" data-aos="zoom-in"></p>
+      <p class="pases" data-aos="fade-up"><strong id="saludo-pases"></strong></p>
+    </section>
+
+    <!-- 4. Cuenta regresiva sobre la foto 2 -->
+    <section class="escena">
+      <div class="escena-fondo oscuro"><img data-foto="1" alt=""></div>
+      <div class="escena-frente abajo">
+        <div class="contenido centro">
+          <h2 class="titulo claro" data-aos="zoom-in">¡Nos casamos!</h2>
+          <p class="fecha-corta" id="fecha-corta" data-aos="fade-up" data-aos-delay="100"></p>
+          <div class="cuenta" id="cuenta">
+            <div data-aos="flip-left" data-aos-delay="150"><strong data-u="d">0</strong><span>Días</span></div>
+            <div data-aos="flip-right" data-aos-delay="300"><strong data-u="h">0</strong><span>Hrs</span></div>
+            <div data-aos="flip-left" data-aos-delay="450"><strong data-u="m">0</strong><span>Mins</span></div>
+            <div data-aos="flip-right" data-aos-delay="600"><strong data-u="s">0</strong><span>Segs</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Frase -->
+    <section class="banda">
+      <p class="banda-texto cursiva" id="frase" data-aos="fade-up"></p>
+    </section>
+
+    <!-- 6. Padres: foto 3 a la izquierda -->
+    <section class="dividida">
+      <div class="dividida-foto"><img data-foto="2" alt=""></div>
+      <div class="dividida-info">
+        <div class="tarjeta-papel">
+          <h2 class="subtitulo" id="txt-padres" data-aos="fade-down"></h2>
+          <div class="lista-grupos" id="padres"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Itinerario sobre la foto 4 -->
+    <section class="escena">
+      <div class="escena-fondo"><img data-foto="3" alt=""></div>
+      <div class="escena-frente">
+        <div class="contenido">
+          <div class="panel-velo">
+            <h2 class="titulo" data-aos="fade-right">Itinerario</h2>
+            <ol class="linea-tiempo" id="itinerario"></ol>
+            <p class="panel-pie" id="iniciales-itinerario" data-aos="zoom-in"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Ubicaciones: foto 5 a la derecha -->
+    <section class="dividida invertida">
+      <div class="dividida-foto"><img data-foto="4" alt=""></div>
+      <div class="dividida-info">
+        <div class="tarjeta-papel">
+          <h2 class="subtitulo" data-aos="fade-down">¿Dónde y cuándo?</h2>
+          <div class="lista-grupos" id="lugares"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Código de vestimenta: foto 6 a la izquierda -->
+    <section class="dividida">
+      <div class="dividida-foto"><img data-foto="5" alt=""></div>
+      <div class="dividida-info">
+        <div class="tarjeta-papel">
+          <h2 class="subtitulo" data-aos="fade-down">Código de vestimenta</h2>
+          <p class="destacado" id="vestimenta" data-aos="flip-left"></p>
+          <p class="nota" id="vestimenta-nota" data-aos="fade-up" data-aos-delay="150"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Galería: todas las fotos en orden numérico. Al tocar una se abre el carrusel. -->
+    <section class="galeria" id="seccion-fotos" hidden>
+      <div class="galeria-titulo" data-aos="zoom-in">
+        <h2 id="txt-fotos">Galería</h2>
+        <p class="galeria-sub">de fotos</p>
+      </div>
+      <div class="galeria-grid" id="fotos"></div>
+      <p class="galeria-iniciales" id="galeria-iniciales" data-aos="zoom-in"></p>
+    </section>
+
+    <!-- 11. Mesa de regalos -->
+    <section class="banda clara">
+      <h2 class="titulo" data-aos="fade-down">Mesa de regalos</h2>
+      <p class="nota" data-aos="fade-up">Tu presencia es nuestro mejor regalo, pero si deseas tener un detalle con nosotros:</p>
+      <div class="regalos" id="regalos" data-aos="zoom-in"></div>
+    </section>
+
+    <!-- 12. Confirmación sobre la última foto -->
+    <section class="escena" id="seccion-rsvp">
+      <div class="escena-fondo oscuro"><img data-foto="ultima" alt=""></div>
+      <div class="escena-frente">
+        <div class="contenido">
+          <div class="tarjeta-papel">
+            <h2 class="titulo" data-aos="fade-down">Confirma tu asistencia</h2>
+            <p class="nota" id="rsvp-limite" data-aos="fade-up"></p>
+
+            <p class="nota" id="rsvp-sin-id" hidden>Para confirmar usa el enlace personal que te enviamos.</p>
+
+            <div id="rsvp-estado" class="rsvp-estado" hidden></div>
+
+            <form id="rsvp" class="rsvp" hidden>
+              <div class="radios">
+                <label><input type="radio" name="asiste" value="si" checked> Sí asistiré</label>
+                <label><input type="radio" name="asiste" value="no"> No podré asistir</label>
+              </div>
+              <label class="campo" id="campo-personas">
+                <span>¿Cuántas personas asistirán?</span>
+                <select name="personas" id="rsvp-personas"></select>
+              </label>
+              <textarea name="mensaje" rows="3" maxlength="500" placeholder="Mensaje para los novios (opcional)"></textarea>
+              <button type="submit" class="btn" id="rsvp-enviar">Confirmar asistencia</button>
+              <p class="error" id="rsvp-error" hidden></p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="pie">
+      <p class="firma" id="firma" data-aos="zoom-in" data-aos-offset="0"></p>
+      <p class="nota">¡Te esperamos!</p>
+    </footer>
+  </main>
+
+  <!-- Carrusel de fotos (se abre al tocar una foto de la galería) -->
+  <div id="carrusel" class="carrusel" hidden>
+    <button type="button" class="carrusel-cerrar" id="carrusel-cerrar" aria-label="Cerrar galería">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div class="carrusel-cuerpo" id="carrusel-cuerpo">
+      <button type="button" class="carrusel-flecha izq" id="carrusel-prev" aria-label="Anterior">&#10094;</button>
+      <div class="carrusel-slide" id="carrusel-slide"><img id="carrusel-img" alt=""></div>
+      <button type="button" class="carrusel-flecha der" id="carrusel-next" aria-label="Siguiente">&#10095;</button>
+      <div class="carrusel-puntos" id="carrusel-puntos"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="invitacion.js"></script>
+</body>
+</html>

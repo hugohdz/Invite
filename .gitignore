@@ -1,0 +1,6 @@
+# Datos privados: se quedan solo en tu PC
+datos/invitados.txt
+datos/confirmaciones.txt
+
+__pycache__/
+*.pyc

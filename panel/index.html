@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Panel de invitados</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --fondo:#f5f5f4; --tarjeta:#fff; --texto:#292524; --suave:#78716c; --borde:#e7e5e4;
+            --si:#16a34a; --no:#dc2626; --pend:#d97706; --acento:#b38a4a; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--fondo); color: var(--texto); font: 14px/1.5 "Montserrat", system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 22px; }
+    .sub { color: var(--suave); font-size: 13px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .kpi { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px 16px; }
+    .kpi b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+    .kpi span { color: var(--suave); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .kpi small { display: block; color: var(--suave); font-size: 12px; }
+    .si b { color: var(--si); } .no b { color: var(--no); } .pend b { color: var(--pend); }
+    .barra { height: 10px; border-radius: 99px; overflow: hidden; display: flex; background: var(--borde); margin-bottom: 20px; }
+    .barra div { transition: width .4s; }
+    .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .filtros input { flex: 1; min-width: 180px; padding: 9px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
+    .chip { padding: 8px 12px; border: 1px solid var(--borde); border-radius: 99px; background: var(--tarjeta); font: inherit; cursor: pointer; }
+    .chip.activo { background: var(--texto); color: #fff; border-color: var(--texto); }
+    .tabla-wrap { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+    th { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
+    tr:last-child td { border-bottom: 0; }
+    td.num { font-variant-numeric: tabular-nums; text-align: right; }
+    .estado { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .estado.si { background: #dcfce7; color: #166534; } .estado.no { background: #fee2e2; color: #991b1b; } .estado.pend { background: #fef3c7; color: #92400e; }
+    .msg { color: var(--suave); font-size: 13px; max-width: 260px; }
+    .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--borde); background: var(--tarjeta); font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; color: inherit; white-space: nowrap; }
+    .btn.wa { background: #16a34a; color: #fff; border-color: #16a34a; }
+    .login { max-width: 340px; margin: 12vh auto; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 24px; display: grid; gap: 12px; }
+    .login input { padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
+    .login button { padding: 10px; border: 0; border-radius: 8px; background: var(--texto); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .error { color: var(--no); margin: 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <form id="login" class="login" hidden>
+    <h1>Panel de invitados</h1>
+    <input type="password" id="clave" placeholder="Clave" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+    <p class="error" id="login-error" hidden>Clave incorrecta</p>
+  </form>
+
+  <main id="panel" hidden>
+    <header>
+      <div>
+        <h1>Panel de invitados</h1>
+        <div class="sub" id="actualizado"></div>
+      </div>
+      <button class="btn" id="recargar" type="button">Actualizar</button>
+    </header>
+
+    <section class="kpis">
+      <div class="kpi"><span>Invitaciones enviadas</span><b id="k-inv">0</b><small id="k-pases"></small></div>
+      <div class="kpi si"><span>Confirmaron</span><b id="k-si">0</b><small id="k-si-p"></small></div>
+      <div class="kpi no"><span>No asistirán</span><b id="k-no">0</b><small id="k-no-p"></small></div>
+      <div class="kpi pend"><span>Sin responder</span><b id="k-pend">0</b><small id="k-pend-p"></small></div>
+    </section>
+
+    <div class="barra" title="Confirmados / No asistirán / Sin responder">
+      <div id="b-si" style="background:var(--si)"></div>
+      <div id="b-no" style="background:var(--no)"></div>
+      <div id="b-pend" style="background:var(--pend)"></div>
+    </div>
+
+    <div class="filtros">
+      <input id="buscar" type="search" placeholder="Buscar invitado...">
+      <button class="chip activo" data-filtro="todos" type="button">Todos</button>
+      <button class="chip" data-filtro="si" type="button">Confirmaron</button>
+      <button class="chip" data-filtro="no" type="button">No asistirán</button>
+      <button class="chip" data-filtro="pend" type="button">Sin responder</button>
+    </div>
+
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Invitado</th><th class="num">Pases</th><th>Estado</th><th class="num">Asisten</th><th>Mensaje</th><th>Enlace</th></tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    const CLAVE_KEY = "panel-clave";
+    let clave = "";
+    try { clave = sessionStorage.getItem(CLAVE_KEY) || ""; } catch {}
+    let filas = [];
+    let filtro = "todos";
+
+    // Rutas relativas: funciona igual en local y en GitHub Pages (/Invite/panel/).
+    const enlace = (id) => new URL(`../invitaciones/boda/?id=${encodeURIComponent(id)}`, location.href).href;
+    const estadoDe = (c) => !c ? "pend" : c.asiste ? "si" : "no";
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const pers = (n) => `${n} ${n === 1 ? "persona" : "personas"}`;
+
+    const leer = async (url) => { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(url); return r.json(); };
+
+    // Publicado (GitHub Pages): invitados.json + confirmaciones de Google Sheets.
+    // Local (servidor.py): /api/resumen.
+    async function obtenerFilas() {
+      const evento = await leer("../datos/evento.json");
+      if (evento.confirmacionesUrl) {
+        const [invitados, res] = await Promise.all([
+          leer("../datos/invitados.json"),
+          leer(`${evento.confirmacionesUrl}?accion=resumen&clave=${encodeURIComponent(clave)}`),
+        ]);
+        if (res.error) return null;
+        return invitados.map((i) => ({ ...i, telefono: "", confirmacion: res.confirmaciones[String(i.id)] || null }));
+      }
+      const r = await fetch("../api/resumen", { headers: { "X-Clave": clave }, cache: "no-store" });
+      if (r.status === 401) return null;
+      return (await r.json()).invitados;
+    }
+
+    async function cargar() {
+      const datos = await obtenerFilas();
+      if (!datos) { mostrarLogin(true); return; }
+      filas = datos;
+      $("login").hidden = true;
+      $("panel").hidden = false;
+      render();
+      $("actualizado").textContent = `Actualizado: ${new Date().toLocaleTimeString("es-MX")}`;
+    }
+
+    function mostrarLogin(error) {
+      $("panel").hidden = true;
+      $("login").hidden = false;
+      $("login-error").hidden = !error || !clave;
+    }
+
+    function render() {
+      const total = filas.length;
+      const pases = filas.reduce((s, f) => s + f.pases, 0);
+      const si = filas.filter((f) => estadoDe(f.confirmacion) === "si");
+      const no = filas.filter((f) => estadoDe(f.confirmacion) === "no");
+      const pend = filas.filter((f) => estadoDe(f.confirmacion) === "pend");
+      const personasSi = si.reduce((s, f) => s + f.confirmacion.personas, 0);
+
+      $("k-inv").textContent = total;
+      $("k-pases").textContent = `${pers(pases)} invitadas`;
+      $("k-si").textContent = si.length;
+      $("k-si-p").textContent = `${pers(personasSi)} asistirán`;
+      $("k-no").textContent = no.length;
+      $("k-no-p").textContent = `${pers(no.reduce((s, f) => s + f.pases, 0))}`;
+      $("k-pend").textContent = pend.length;
+      $("k-pend-p").textContent = `${pers(pend.reduce((s, f) => s + f.pases, 0))} por confirmar`;
+
+      const pct = (n) => (total ? (n / total) * 100 : 0) + "%";
+      $("b-si").style.width = pct(si.length);
+      $("b-no").style.width = pct(no.length);
+      $("b-pend").style.width = pct(pend.length);
+
+      const q = $("buscar").value.trim().toLowerCase();
+      const visibles = filas.filter((f) =>
+        (filtro === "todos" || estadoDe(f.confirmacion) === filtro) &&
+        (!q || f.nombre.toLowerCase().includes(q) || String(f.id).includes(q)));
+
+      const etiquetas = { si: "Confirmó", no: "No asistirá", pend: "Sin responder" };
+      $("filas").innerHTML = visibles.map((f) => {
+        const c = f.confirmacion;
+        const est = estadoDe(c);
+        const link = enlace(f.id);
+        const wa = f.telefono
+          ? `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${esc(f.telefono)}?text=${encodeURIComponent(`Hola ${f.nombre}, te compartimos nuestra invitación: ${link}`)}">WhatsApp</a>`
+          : "";
+        return `<tr>
+          <td>${esc(f.id)}</td>
+          <td>${esc(f.nombre)}</td>
+          <td class="num">${f.pases}</td>
+          <td><span class="estado ${est}">${etiquetas[est]}</span>${c ? `<div class="sub">${esc(c.fecha)}</div>` : ""}</td>
+          <td class="num">${c && c.asiste ? c.personas : "—"}</td>
+          <td class="msg">${esc(c?.mensaje)}</td>
+          <td><div class="acciones"><button class="btn" type="button" data-copiar="${esc(link)}">Copiar enlace</button>${wa}</div></td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="7" class="sub">Sin resultados</td></tr>`;
+    }
+
+    $("login").addEventListener("submit", (e) => {
+      e.preventDefault();
+      clave = $("clave").value;
+      try { sessionStorage.setItem(CLAVE_KEY, clave); } catch {}
+      cargar();
+    });
+    $("recargar").addEventListener("click", cargar);
+    $("buscar").addEventListener("input", render);
+    document.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => {
+      filtro = b.dataset.filtro;
+      document.querySelectorAll("[data-filtro]").forEach((x) => x.classList.toggle("activo", x === b));
+      render();
+    }));
+    $("filas").addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-copiar]");
+      if (!b) return;
+      try { await navigator.clipboard.writeText(b.dataset.copiar); b.textContent = "¡Copiado!"; }
+      catch { prompt("Copia el enlace:", b.dataset.copiar); }
+      setTimeout(() => { b.textContent = "Copiar enlace"; }, 1500);
+    });
+
+    if (clave) cargar(); else mostrarLogin(false);
+    setInterval(() => { if (!$("panel").hidden) cargar(); }, 30000);
+  })();
+  </script>
+</body>
+</html>
