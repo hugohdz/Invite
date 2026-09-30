@@ -126,12 +126,23 @@
       }
       const r = await fetch("../api/resumen", { headers: { "X-Clave": clave }, cache: "no-store" });
       if (r.status === 401) return null;
+      if (!r.ok) {
+        // Sin servidor.py (p. ej. GitHub Pages) y sin Google Sheets configurado.
+        throw new Error("El panel aún no está conectado a Google Sheets. Agrega \"confirmacionesUrl\" en datos/evento.json (ver google-apps-script/Codigo.gs).");
+      }
       return (await r.json()).invitados;
     }
 
     async function cargar() {
-      const datos = await obtenerFilas();
-      if (!datos) { mostrarLogin(true); return; }
+      let datos;
+      try {
+        datos = await obtenerFilas();
+      } catch (e) {
+        mostrarLogin(e.message.startsWith("El panel") ? e.message : "No se pudieron leer las confirmaciones. Revisa tu conexión o la URL de Google Sheets.");
+        console.error(e);
+        return;
+      }
+      if (!datos) { mostrarLogin("Clave incorrecta"); return; }
       filas = datos;
       $("login").hidden = true;
       $("panel").hidden = false;
@@ -142,6 +153,7 @@
     function mostrarLogin(error) {
       $("panel").hidden = true;
       $("login").hidden = false;
+      $("login-error").textContent = error || "";
       $("login-error").hidden = !error || !clave;
     }
 
@@ -213,7 +225,7 @@
       setTimeout(() => { b.textContent = "Copiar enlace"; }, 1500);
     });
 
-    if (clave) cargar(); else mostrarLogin(false);
+    if (clave) cargar(); else mostrarLogin("");
     setInterval(() => { if (!$("panel").hidden) cargar(); }, 30000);
   })();
   </script>
