@@ -6,9 +6,9 @@
 //
 // Dos modos de funcionamiento:
 //  - Local (python servidor.py): invitados, fotos y confirmaciones pasan por /api del servidor.
-//  - Publicado (GitHub Pages): si evento.json tiene "confirmacionesUrl", se usan
-//    datos/invitados.json y datos/fotos.json (los genera publicar.py) y las
-//    confirmaciones se guardan en Google Sheets.
+//  - Publicado (GitHub Pages): si evento.json tiene "confirmacionesUrl", los invitados
+//    y las confirmaciones se leen/guardan en Google Sheets, y las fotos salen de
+//    datos/fotos.json (lo genera publicar.py).
 (function () {
   "use strict";
 
@@ -39,54 +39,33 @@
       return;
     }
 
-    if (idInvitado) {
-      try { invitado = await buscarInvitado(idInvitado); }
-      catch { invitado = null; }
-    }
+    // El invitado se pide en paralelo: Google puede tardar unos segundos en responder
+    // y la invitación no debe quedarse en blanco mientras tanto.
+    const pedirInvitado = idInvitado ? buscarInvitado(idInvitado).catch(() => null) : Promise.resolve(null);
 
     // La galería puede forzar un tema en el iframe; la URL pública solo lleva ?id=.
     document.documentElement.dataset.tema = window.frameElement ? (params.get("tema") || evento.tema) : evento.tema;
 
     rellenar();
-    renderInvitado();
     iniciarSobre();
     iniciarCuenta();
     iniciarAnimaciones();
     await cargarFotos();
     iniciarCapas();
+
+    invitado = await pedirInvitado;
+    renderInvitado();
+    refrescarAOS();
   }
 
   // ---------- Origen de datos (local o publicado) ----------
   const publicado = () => !!evento.confirmacionesUrl;
 
   async function buscarInvitado(id) {
-    if (!publicado()) {
-      try { return await obtener(`${RAIZ}api/invitado?id=${encodeURIComponent(id)}`); }
-      catch { /* sin servidor (p. ej. GitHub Pages aún sin Google Sheets): usa invitados.json */ }
-      return buscarEnJson(id);
-    }
-    // Publicado: la hoja "Invitados" de Google Sheets es la lista oficial.
+    if (!publicado()) return obtener(`${RAIZ}api/invitado?id=${encodeURIComponent(id)}`);
+    // La hoja "Invitados" de Google Sheets es la lista oficial.
     const r = await obtener(`${evento.confirmacionesUrl}?accion=invitado&id=${encodeURIComponent(id)}`);
-    if ("invitado" in r) return r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null;
-    // Script de Google anterior (sin hoja Invitados): usa invitados.json y pide solo la confirmación.
-    const inv = await buscarEnJson(id);
-    if (!inv) return null;
-    try {
-      const est = await obtener(`${evento.confirmacionesUrl}?accion=estado&id=${encodeURIComponent(id)}`);
-      inv.confirmacion = est.confirmacion || null;
-    } catch {
-      inv.confirmacion = null;
-    }
-    return inv;
-  }
-
-  async function buscarEnJson(id) {
-    try {
-      const lista = await obtener(`${RAIZ}datos/invitados.json`);
-      return lista.find((x) => String(x.id) === id) || null;
-    } catch {
-      return null;
-    }
+    return r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null;
   }
 
   async function guardarConfirmacion(datos) {
