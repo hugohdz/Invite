@@ -33,4 +33,5 @@ publica una **Nueva versión** en Implementar > Gestionar implementaciones (la U
 python servidor.py
 ```
 
-Abre http://localhost:8765/invitaciones/boda/?id=1. Si `confirmacionesUrl` está vacío, las confirmaciones se guardan en `datos/confirmaciones.txt`.
+Abre http://localhost:8765/invitaciones/boda/?id=1. El evento, los invitados y las confirmaciones
+se siguen leyendo de Google Sheets (la URL está en `datos/evento.json`), así que necesitas internet.

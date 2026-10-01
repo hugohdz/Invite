@@ -1,6 +1,6 @@
 // Invitación. Todo el contenido sale de datos, no del código:
 //   Google Sheets, hoja "Evento" -> nombres, fecha, lugares, WhatsApp, tema… (se edita en el panel)
-//   /datos/evento.json           -> "confirmacionesUrl" (dónde está Google) y respaldo del evento
+//   /datos/evento.json           -> solo "confirmacionesUrl" (dónde está el script de Google)
 //   /fotos/1.jpg, 2.jpg…         -> fotos, se muestran en orden numérico
 // El único parámetro de URL es ?id=<id del invitado>.
 //
@@ -54,6 +54,11 @@
       }
       txt("sobre-para", "Toca el sello para abrir");
     }
+    // evento.json ya solo guarda la URL de Google: sin respuesta de Google no hay qué mostrar.
+    if (!evento.nombre1) {
+      mostrarSinConexion();
+      return;
+    }
     // Local o script de Google anterior: el invitado se pide aparte, en paralelo.
     if (!pedirInvitado) pedirInvitado = idInvitado ? buscarInvitado(idInvitado).catch(() => null) : Promise.resolve(null);
 
@@ -70,6 +75,17 @@
     invitado = await pedirInvitado;
     renderInvitado();
     refrescarAOS();
+  }
+
+  function mostrarSinConexion() {
+    txt("sobre-para", "");
+    const caja = document.createElement("div");
+    caja.style.cssText = "position:fixed;inset:auto 16px 12vh;z-index:11;text-align:center;font-family:Montserrat,sans-serif;color:#4a4036";
+    caja.innerHTML = `<p style="margin:0 0 12px">No pudimos cargar la invitación.<br>Revisa tu conexión a internet.</p>
+      <button type="button" style="padding:10px 22px;border:0;border-radius:999px;background:#b38a4a;color:#fff;font:500 14px Montserrat,sans-serif;cursor:pointer">Reintentar</button>`;
+    caja.querySelector("button").addEventListener("click", () => location.reload());
+    document.body.appendChild(caja);
+    $("sobre").style.pointerEvents = "none";
   }
 
   // ---------- Origen de datos (local o publicado) ----------
