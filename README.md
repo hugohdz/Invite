@@ -6,15 +6,20 @@
 
 ## Editar el contenido
 
-| Qué | Dónde |
-| --- | --- |
-| Nombres, fecha, lugares, itinerario, WhatsApp, tema | `datos/evento.json` (requiere subir cambios) |
-| **Invitados**: `id \| nombre \| pases \| telefono` | Hoja **"Invitados"** del archivo de Google Sheets (**sin publicar nada**) |
-| Confirmaciones | Hoja "Confirmaciones" (la llena la invitación sola) |
-| Fotos (1.jpg = portada, 2.jpg = cuenta regresiva…) | `fotos/` + `python publicar.py` y subir cambios |
+Todo se edita desde el **panel** (`panel/`, menú ☰), sin publicar nada:
+
+| Menú | Qué edita | Dónde se guarda |
+| --- | --- | --- |
+| **Confirmaciones** | (solo consulta) quién confirmó, enlaces y WhatsApp | hoja "Confirmaciones" |
+| **Evento** | nombres, fecha, color, textos, padres, ubicaciones, itinerario, vestimenta, regalos | hoja "Evento" |
+| **Invitados** | agregar (uno o varios), editar y eliminar invitados | hoja "Invitados" |
+
+Lo único que requiere subir cambios a GitHub:
+- **Fotos** (`fotos/1.jpg` = portada, `2.jpg` = cuenta regresiva…): después ejecuta `python publicar.py`.
+- `datos/evento.json`: solo guarda `confirmacionesUrl` (la dirección del script de Google).
 
 El enlace de cada invitado es `https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>`.
-Usa ids difíciles de adivinar (p. ej. `k7m2`) para que nadie vea otras invitaciones cambiando el número.
+El panel genera ids difíciles de adivinar para que nadie vea otras invitaciones cambiando el enlace.
 
 ## Google Sheets
 

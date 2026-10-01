@@ -12,10 +12,29 @@
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     body { margin: 0; background: var(--fondo); color: var(--texto); font: 14px/1.5 "Montserrat", system-ui, sans-serif; }
-    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
-    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-    h1 { margin: 0; font-size: 22px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0 0 4px; font-size: 18px; }
     .sub { color: var(--suave); font-size: 13px; }
+
+    /* Barra superior + menú hamburguesa */
+    .barra-sup { position: sticky; top: 0; z-index: 20; background: var(--tarjeta); border-bottom: 1px solid var(--borde); }
+    .barra-sup-in { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+    .barra-sup h1 { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hamburguesa { width: 40px; height: 40px; border: 1px solid var(--borde); border-radius: 10px; background: var(--tarjeta); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+    .hamburguesa span, .hamburguesa span::before, .hamburguesa span::after { display: block; width: 18px; height: 2px; background: var(--texto); border-radius: 2px; position: relative; content: ""; }
+    .hamburguesa span::before { position: absolute; top: -6px; } .hamburguesa span::after { position: absolute; top: 6px; }
+    .menu-fondo { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.35); }
+    .menu { position: fixed; z-index: 31; top: 0; left: 0; bottom: 0; width: min(280px, 85vw); background: var(--tarjeta); box-shadow: 4px 0 24px rgba(0,0,0,.15); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; transform: translateX(-105%); transition: transform .25s ease; }
+    .menu.abierto { transform: none; }
+    .menu-titulo { padding: 4px 12px 14px; font-weight: 600; color: var(--acento); letter-spacing: .05em; }
+    .menu a, .menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 15px; color: inherit; text-decoration: none; cursor: pointer; text-align: left; }
+    .menu a:hover, .menu button:hover { background: var(--fondo); }
+    .menu a.activo { background: var(--texto); color: #fff; }
+    .menu hr { border: 0; border-top: 1px solid var(--borde); margin: 8px 0; width: 100%; }
+    .menu .ico { width: 22px; text-align: center; }
+
+    /* Confirmaciones */
     .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .kpi { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px 16px; }
     .kpi b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
@@ -29,7 +48,7 @@
     .chip { padding: 8px 12px; border: 1px solid var(--borde); border-radius: 99px; background: var(--tarjeta); font: inherit; cursor: pointer; }
     .chip.activo { background: var(--texto); color: #fff; border-color: var(--texto); }
     .tabla-wrap { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    table { width: 100%; border-collapse: collapse; min-width: 640px; }
     th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--borde); vertical-align: top; }
     th { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
     tr:last-child td { border-bottom: 0; }
@@ -40,6 +59,29 @@
     .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--borde); background: var(--tarjeta); font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; color: inherit; white-space: nowrap; }
     .btn.wa { background: #16a34a; color: #fff; border-color: #16a34a; }
+    .btn.peligro { color: var(--no); }
+    .btn.principal { background: var(--texto); color: #fff; border-color: var(--texto); padding: 10px 18px; font-size: 14px; font-weight: 600; }
+    .btn:disabled { opacity: .6; cursor: wait; }
+
+    /* Formularios */
+    .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .tarjeta > h3 { margin: 0 0 14px; font-size: 15px; }
+    .rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .campo { display: grid; gap: 4px; font-size: 13px; }
+    .campo span { color: var(--suave); }
+    .campo.ancho { grid-column: 1 / -1; }
+    .campo input, .campo select, .campo textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; }
+    .campo textarea { resize: vertical; min-height: 64px; }
+    .campo small { color: var(--suave); font-size: 12px; }
+    .lista-item { border: 1px dashed var(--borde); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: grid; gap: 10px; }
+    .lista-item .item-pie { display: flex; justify-content: flex-end; }
+    .barra-guardar { position: sticky; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin: 0 -16px; background: rgba(245,245,244,.95); border-top: 1px solid var(--borde); }
+    .aviso { font-size: 13px; }
+    .aviso.ok { color: var(--si); } .aviso.mal { color: var(--no); } .aviso.pend { color: var(--pend); }
+    .nota-modo { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 12px 14px; }
+    details summary { cursor: pointer; font-weight: 600; }
+
+    /* Acceso */
     .login { max-width: 340px; margin: 12vh auto; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 24px; display: grid; gap: 12px; }
     .login input { padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
     .login button { padding: 10px; border: 0; border-radius: 8px; background: var(--texto); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
@@ -54,48 +96,106 @@
     <p class="error" id="login-error" hidden>Clave incorrecta</p>
   </form>
 
-  <main id="panel" hidden>
-    <header>
-      <div>
-        <h1>Panel de invitados</h1>
-        <div class="sub" id="actualizado"></div>
-      </div>
-      <div class="acciones">
+  <div id="app" hidden>
+    <!-- Barra superior con menú hamburguesa -->
+    <header class="barra-sup">
+      <div class="barra-sup-in">
+        <button class="hamburguesa" id="abrir-menu" type="button" aria-label="Abrir menú" aria-controls="menu" aria-expanded="false"><span></span></button>
+        <h1 id="titulo-vista">Confirmaciones</h1>
         <button class="btn" id="recargar" type="button">Actualizar</button>
-        <button class="btn" id="salir" type="button">Salir</button>
       </div>
     </header>
 
-    <section class="kpis">
-      <div class="kpi"><span>Invitaciones enviadas</span><b id="k-inv">0</b><small id="k-pases"></small></div>
-      <div class="kpi si"><span>Confirmaron</span><b id="k-si">0</b><small id="k-si-p"></small></div>
-      <div class="kpi no"><span>No asistirán</span><b id="k-no">0</b><small id="k-no-p"></small></div>
-      <div class="kpi pend"><span>Sin responder</span><b id="k-pend">0</b><small id="k-pend-p"></small></div>
-    </section>
+    <div class="menu-fondo" id="menu-fondo" hidden></div>
+    <nav class="menu" id="menu" aria-label="Menú del panel">
+      <div class="menu-titulo">PANEL DE INVITADOS</div>
+      <a href="#confirmaciones" data-vista="confirmaciones"><span class="ico">✓</span> Confirmaciones</a>
+      <a href="#evento" data-vista="evento"><span class="ico">✎</span> Evento</a>
+      <a href="#invitados" data-vista="invitados"><span class="ico">☺</span> Invitados</a>
+      <hr>
+      <a href="../invitaciones/boda/" target="_blank" rel="noopener"><span class="ico">↗</span> Ver invitación</a>
+      <button type="button" id="salir"><span class="ico">⎋</span> Salir</button>
+    </nav>
 
-    <div class="barra" title="Confirmados / No asistirán / Sin responder">
-      <div id="b-si" style="background:var(--si)"></div>
-      <div id="b-no" style="background:var(--no)"></div>
-      <div id="b-pend" style="background:var(--pend)"></div>
-    </div>
+    <main>
+      <!-- ===== Vista: Confirmaciones ===== -->
+      <section id="vista-confirmaciones" data-titulo="Confirmaciones">
+        <p class="sub" id="actualizado" style="margin:0 0 14px"></p>
+        <section class="kpis">
+          <div class="kpi"><span>Invitaciones enviadas</span><b id="k-inv">0</b><small id="k-pases"></small></div>
+          <div class="kpi si"><span>Confirmaron</span><b id="k-si">0</b><small id="k-si-p"></small></div>
+          <div class="kpi no"><span>No asistirán</span><b id="k-no">0</b><small id="k-no-p"></small></div>
+          <div class="kpi pend"><span>Sin responder</span><b id="k-pend">0</b><small id="k-pend-p"></small></div>
+        </section>
+        <div class="barra" title="Confirmados / No asistirán / Sin responder">
+          <div id="b-si" style="background:var(--si)"></div>
+          <div id="b-no" style="background:var(--no)"></div>
+          <div id="b-pend" style="background:var(--pend)"></div>
+        </div>
+        <div class="filtros">
+          <input id="buscar" type="search" placeholder="Buscar invitado...">
+          <button class="chip activo" data-filtro="todos" type="button">Todos</button>
+          <button class="chip" data-filtro="si" type="button">Confirmaron</button>
+          <button class="chip" data-filtro="no" type="button">No asistirán</button>
+          <button class="chip" data-filtro="pend" type="button">Sin responder</button>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Invitado</th><th class="num">Pases</th><th>Estado</th><th class="num">Asisten</th><th>Mensaje</th><th>Enlace</th></tr>
+            </thead>
+            <tbody id="filas"></tbody>
+          </table>
+        </div>
+      </section>
 
-    <div class="filtros">
-      <input id="buscar" type="search" placeholder="Buscar invitado...">
-      <button class="chip activo" data-filtro="todos" type="button">Todos</button>
-      <button class="chip" data-filtro="si" type="button">Confirmaron</button>
-      <button class="chip" data-filtro="no" type="button">No asistirán</button>
-      <button class="chip" data-filtro="pend" type="button">Sin responder</button>
-    </div>
+      <!-- ===== Vista: Evento ===== -->
+      <section id="vista-evento" data-titulo="Evento" hidden>
+        <p class="nota-modo" id="evento-sin-google" hidden>Para editar el evento desde aquí, el panel debe estar conectado a Google Sheets (campo "confirmacionesUrl" en datos/evento.json).</p>
+        <p class="nota-modo" id="evento-migrar" hidden>La hoja "Evento" de Google aún está vacía. Te mostramos los datos actuales de la invitación: revísalos y pulsa <b>Guardar evento</b> para pasarlos a Google.</p>
+        <form id="form-evento" novalidate></form>
+      </section>
 
-    <div class="tabla-wrap">
-      <table>
-        <thead>
-          <tr><th>ID</th><th>Invitado</th><th class="num">Pases</th><th>Estado</th><th class="num">Asisten</th><th>Mensaje</th><th>Enlace</th></tr>
-        </thead>
-        <tbody id="filas"></tbody>
-      </table>
-    </div>
-  </main>
+      <!-- ===== Vista: Invitados ===== -->
+      <section id="vista-invitados" data-titulo="Invitados" hidden>
+        <p class="nota-modo" id="invitados-sin-google" hidden>Para editar invitados desde aquí, el panel debe estar conectado a Google Sheets. En modo local edita datos/invitados.txt.</p>
+        <div id="invitados-editor">
+          <form class="tarjeta" id="form-invitado" novalidate>
+            <h3 id="form-invitado-titulo">Agregar invitado</h3>
+            <div class="rejilla">
+              <label class="campo ancho"><span>Nombre que aparece en la invitación *</span><input name="nombre" required maxlength="200" placeholder="Familia Pérez García"></label>
+              <label class="campo"><span>Pases (personas) *</span><input name="pases" type="number" min="1" max="50" value="1" required></label>
+              <label class="campo"><span>Teléfono (WhatsApp, con lada)</span><input name="telefono" inputmode="tel" placeholder="5218441234567"></label>
+              <label class="campo"><span>Id del enlace</span><input name="id" maxlength="60" placeholder="Se genera solo"><small>Déjalo vacío para crear uno difícil de adivinar.</small></label>
+            </div>
+            <div class="acciones" style="margin-top:14px; align-items:center">
+              <button class="btn principal" type="submit" id="guardar-invitado">Agregar invitado</button>
+              <button class="btn" type="button" id="cancelar-edicion" hidden>Cancelar edición</button>
+              <span class="aviso" id="aviso-invitado"></span>
+            </div>
+          </form>
+
+          <details class="tarjeta" id="bloque-varios">
+            <summary>Agregar varios a la vez</summary>
+            <p class="sub">Un invitado por línea: <code>Nombre | pases | teléfono</code>. Los pases y el teléfono son opcionales.</p>
+            <label class="campo"><textarea id="varios" rows="6" placeholder="Familia Pérez García | 4 | 5218441234567&#10;Sofía Hernández | 2&#10;Carlos Ruiz"></textarea></label>
+            <div class="acciones" style="margin-top:10px; align-items:center">
+              <button class="btn principal" type="button" id="agregar-varios">Agregar todos</button>
+              <span class="aviso" id="aviso-varios"></span>
+            </div>
+          </details>
+
+          <div class="filtros"><input id="buscar-inv" type="search" placeholder="Buscar invitado..."></div>
+          <div class="tabla-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Invitado</th><th class="num">Pases</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+              <tbody id="filas-inv"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
   (function () {
@@ -104,60 +204,112 @@
     const CLAVE_KEY = "panel-clave";
     let clave = "";
     try { clave = sessionStorage.getItem(CLAVE_KEY) || ""; } catch {}
-    let filas = [];
+    let filas = [];          // invitados con su confirmación
+    let evento = {};         // evento guardado en Google (o el de evento.json mientras la hoja esté vacía)
+    let urlGoogle = "";      // "" = modo local (servidor.py)
     let filtro = "todos";
+    let vista = "confirmaciones";
+    let eventoSinGuardar = false;
 
     // Rutas relativas: funciona igual en local y en GitHub Pages (/Invite/panel/).
     const enlace = (id) => new URL(`../invitaciones/boda/?id=${encodeURIComponent(id)}`, location.href).href;
     const estadoDe = (c) => !c ? "pend" : c.asiste ? "si" : "no";
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const pers = (n) => `${n} ${n === 1 ? "persona" : "personas"}`;
-
     const leer = async (url) => { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(url); return r.json(); };
 
-    // Publicado (GitHub Pages): invitados y confirmaciones salen de Google Sheets (hojas "Invitados" y "Confirmaciones").
-    // Local (servidor.py): /api/resumen.
-    async function obtenerFilas() {
-      const evento = await leer("../datos/evento.json");
-      if (evento.confirmacionesUrl) {
-        const res = await leer(`${evento.confirmacionesUrl}?accion=resumen&clave=${encodeURIComponent(clave)}`);
+    function aviso(id, texto, tipo) {
+      const el = $(id);
+      el.textContent = texto;
+      el.className = `aviso ${tipo || ""}`;
+    }
+
+    // Escribe en Google Sheets (sin Content-Type para evitar la consulta previa de CORS).
+    async function enviar(datos) {
+      const r = await fetch(urlGoogle, { method: "POST", body: JSON.stringify({ ...datos, clave }) });
+      const res = await r.json();
+      // El script anterior trata todo POST como una confirmación y responde esto.
+      if (res.error === "Invitación no encontrada" && datos.accion) {
+        throw new Error("el script de Google es la versión anterior. Pega el nuevo google-apps-script/Codigo.gs y publica una nueva versión.");
+      }
+      if (res.error) throw new Error(res.error);
+      return res;
+    }
+
+    // ---------- Carga ----------
+    // Publicado: todo sale de Google Sheets (hojas Evento, Invitados y Confirmaciones).
+    // Local (servidor.py): /api/resumen (solo confirmaciones; Evento e Invitados no se editan aquí).
+    async function obtenerDatos() {
+      const local = await leer("../datos/evento.json");
+      urlGoogle = local.confirmacionesUrl || "";
+      if (urlGoogle) {
+        const res = await leer(`${urlGoogle}?accion=resumen&clave=${encodeURIComponent(clave)}`);
         if (res.error) return null;
-        return res.invitados; // incluye teléfonos: solo se entregan con la clave
+        const hojaVacia = !res.evento || !Object.keys(res.evento).length;
+        const { confirmacionesUrl, ...respaldo } = local;
+        return { invitados: res.invitados, evento: hojaVacia ? respaldo : res.evento, hojaVacia };
       }
       const r = await fetch("../api/resumen", { headers: { "X-Clave": clave }, cache: "no-store" });
       if (r.status === 401) return null;
-      if (!r.ok) {
-        // Sin servidor.py (p. ej. GitHub Pages) y sin Google Sheets configurado.
-        throw new Error("El panel aún no está conectado a Google Sheets. Agrega \"confirmacionesUrl\" en datos/evento.json (ver google-apps-script/Codigo.gs).");
-      }
-      return (await r.json()).invitados;
+      if (!r.ok) throw new Error("El panel aún no está conectado a Google Sheets. Agrega \"confirmacionesUrl\" en datos/evento.json (ver google-apps-script/Codigo.gs).");
+      return { invitados: (await r.json()).invitados, evento: local, hojaVacia: false };
     }
 
-    async function cargar() {
+    async function cargar({ conservarEvento = false } = {}) {
       let datos;
       try {
-        datos = await obtenerFilas();
+        datos = await obtenerDatos();
       } catch (e) {
-        mostrarLogin(e.message.startsWith("El panel") ? e.message : "No se pudieron leer las confirmaciones. Revisa tu conexión o la URL de Google Sheets.");
+        mostrarLogin(e.message.startsWith("El panel") ? e.message : "No se pudieron leer los datos. Revisa tu conexión o la URL de Google Sheets.");
         console.error(e);
         return;
       }
       if (!datos) { mostrarLogin("Clave incorrecta"); return; }
-      filas = datos;
+      filas = datos.invitados || [];
       $("login").hidden = true;
-      $("panel").hidden = false;
-      render();
+      $("app").hidden = false;
+      renderConfirmaciones();
+      renderInvitados();
+      const sinGoogle = !urlGoogle;
+      $("evento-sin-google").hidden = !sinGoogle;
+      $("invitados-sin-google").hidden = !sinGoogle;
+      $("form-evento").hidden = sinGoogle;
+      $("invitados-editor").hidden = sinGoogle;
+      $("evento-migrar").hidden = !datos.hojaVacia;
+      if (!conservarEvento && !eventoSinGuardar) { evento = datos.evento || {}; pintarFormEvento(); }
       $("actualizado").textContent = `Actualizado: ${new Date().toLocaleTimeString("es-MX")}`;
     }
 
     function mostrarLogin(error) {
-      $("panel").hidden = true;
+      $("app").hidden = true;
       $("login").hidden = false;
       $("login-error").textContent = error || "";
       $("login-error").hidden = !error || !clave;
     }
 
-    function render() {
+    // ---------- Menú y vistas ----------
+    const menu = $("menu");
+    function abrirMenu(abrir) {
+      menu.classList.toggle("abierto", abrir);
+      $("menu-fondo").hidden = !abrir;
+      $("abrir-menu").setAttribute("aria-expanded", String(abrir));
+    }
+    function irAVista(nombre) {
+      if (!["confirmaciones", "evento", "invitados"].includes(nombre)) nombre = "confirmaciones";
+      vista = nombre;
+      ["confirmaciones", "evento", "invitados"].forEach((v) => { $(`vista-${v}`).hidden = v !== nombre; });
+      $("titulo-vista").textContent = $(`vista-${nombre}`).dataset.titulo;
+      menu.querySelectorAll("[data-vista]").forEach((a) => a.classList.toggle("activo", a.dataset.vista === nombre));
+      abrirMenu(false);
+      scrollTo(0, 0);
+    }
+    $("abrir-menu").addEventListener("click", () => abrirMenu(!menu.classList.contains("abierto")));
+    $("menu-fondo").addEventListener("click", () => abrirMenu(false));
+    addEventListener("keydown", (e) => { if (e.key === "Escape") abrirMenu(false); });
+    addEventListener("hashchange", () => irAVista(location.hash.slice(1)));
+
+    // ---------- Confirmaciones ----------
+    function renderConfirmaciones() {
       const total = filas.length;
       const pases = filas.reduce((s, f) => s + f.pases, 0);
       const si = filas.filter((f) => estadoDe(f.confirmacion) === "si");
@@ -188,10 +340,6 @@
       $("filas").innerHTML = visibles.map((f) => {
         const c = f.confirmacion;
         const est = estadoDe(c);
-        const link = enlace(f.id);
-        const wa = f.telefono
-          ? `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${esc(f.telefono)}?text=${encodeURIComponent(`Hola ${f.nombre}, te compartimos nuestra invitación: ${link}`)}">WhatsApp</a>`
-          : "";
         return `<tr>
           <td>${esc(f.id)}</td>
           <td>${esc(f.nombre)}</td>
@@ -199,35 +347,325 @@
           <td><span class="estado ${est}">${etiquetas[est]}</span>${c ? `<div class="sub">${esc(c.fecha)}</div>` : ""}</td>
           <td class="num">${c && c.asiste ? c.personas : "—"}</td>
           <td class="msg">${esc(c?.mensaje)}</td>
-          <td><div class="acciones"><button class="btn" type="button" data-copiar="${esc(link)}">Copiar enlace</button>${wa}</div></td>
+          <td>${botonesEnlace(f)}</td>
         </tr>`;
       }).join("") || `<tr><td colspan="7" class="sub">Sin resultados</td></tr>`;
     }
 
+    function botonesEnlace(f) {
+      const link = enlace(f.id);
+      const wa = f.telefono
+        ? `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${esc(f.telefono)}?text=${encodeURIComponent(`Hola ${f.nombre}, te compartimos nuestra invitación: ${link}`)}">WhatsApp</a>`
+        : "";
+      return `<div class="acciones"><button class="btn" type="button" data-copiar="${esc(link)}">Copiar enlace</button>${wa}</div>`;
+    }
+
+    // ---------- Evento ----------
+    const TEMAS = { elegance: "Dorado elegante", rose: "Rosa", noche: "Noche (oscuro)", salvia: "Verde salvia", lila: "Lila" };
+    // Secciones del formulario. "lista" = campos repetibles (padres, lugares, itinerario, regalos).
+    const SECCIONES = [
+      { titulo: "Novios y fecha", campos: [
+        { k: "nombre1", label: "Nombre 1 *", ph: "Melissa" },
+        { k: "nombre2", label: "Nombre 2", ph: "Damian", ayuda: "Déjalo vacío para XV años u otro evento de una persona." },
+        { k: "iniciales", label: "Iniciales del sello", ph: "MD" },
+        { k: "fecha", label: "Fecha y hora del evento *", tipo: "datetime-local" },
+        { k: "eyebrow", label: "Texto sobre los nombres", ph: "Nuestra boda" },
+        { k: "tema", label: "Color de la invitación", tipo: "select", opciones: TEMAS },
+      ] },
+      { titulo: "Textos", campos: [
+        { k: "bienvenida", label: "Mensaje de bienvenida", tipo: "textarea", ph: "El día más importante de\nnuestras vidas ha llegado", ancho: true },
+        { k: "frase", label: "Frase", tipo: "textarea", ancho: true },
+      ] },
+      { titulo: "Padres", campos: [
+        { k: "tituloPadres", label: "Título de la sección", ph: "Con la bendición de nuestros padres", ancho: true },
+      ], lista: { k: "padres", nombre: "grupo", campos: [
+        { k: "titulo", label: "Título del grupo", ph: "Padres de la novia" },
+        { k: "nombres", label: "Nombres (uno por línea)", tipo: "textarea", lineas: true },
+      ] } },
+      { titulo: "Ubicaciones", lista: { k: "lugares", nombre: "ubicación", campos: [
+        { k: "titulo", label: "Título", ph: "Ceremonia" },
+        { k: "lugar", label: "Lugar", ph: "Jardín Las Rubelinas" },
+        { k: "hora", label: "Hora", ph: "3:00 p. m." },
+        { k: "direccion", label: "Dirección", ancho: true },
+        { k: "mapa", label: "Enlace de Google Maps", tipo: "url", ancho: true },
+      ] } },
+      { titulo: "Itinerario", lista: { k: "itinerario", nombre: "actividad", par: true, campos: [
+        { k: "hora", label: "Hora", ph: "15:00" },
+        { k: "texto", label: "Actividad", ph: "Ceremonia civil" },
+      ] } },
+      { titulo: "Código de vestimenta", campos: [
+        { k: "vestimenta", label: "Vestimenta", ph: "Formal" },
+        { k: "vestimentaNota", label: "Nota", ph: "Reservamos el color blanco para la novia." },
+      ] },
+      { titulo: "Galería y regalos", campos: [
+        { k: "tituloFotos", label: "Título de la galería", ph: "Galería" },
+        { k: "cuentaBanco", label: "Datos para transferencia", ph: "CLABE 0000 0000 0000 0000 00" },
+      ], lista: { k: "regalos", nombre: "mesa de regalos", campos: [
+        { k: "texto", label: "Nombre", ph: "Liverpool" },
+        { k: "url", label: "Enlace (opcional)", tipo: "url" },
+      ] } },
+      { titulo: "Confirmación", campos: [
+        { k: "rsvpLimite", label: "Texto de fecha límite", ph: "Por favor confirma antes del 15 de abril de 2027", ancho: true },
+        { k: "whatsapp", label: "WhatsApp de los novios (con lada)", ph: "5218441234567", ayuda: "Para el botón \"Avisar por WhatsApp\"." },
+      ] },
+    ];
+
+    function htmlCampo(c, valor, prefijo) {
+      const nombre = prefijo ? `${prefijo}.${c.k}` : c.k;
+      const v = esc(valor ?? "");
+      let control;
+      if (c.tipo === "textarea") control = `<textarea name="${nombre}" rows="3" placeholder="${esc(c.ph || "")}">${v}</textarea>`;
+      else if (c.tipo === "select") control = `<select name="${nombre}">${Object.entries(c.opciones).map(([k, t]) => `<option value="${k}"${k === valor ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+      else control = `<input name="${nombre}" type="${c.tipo || "text"}" value="${v}" placeholder="${esc(c.ph || "")}">`;
+      return `<label class="campo${c.ancho ? " ancho" : ""}"><span>${esc(c.label)}</span>${control}${c.ayuda ? `<small>${esc(c.ayuda)}</small>` : ""}</label>`;
+    }
+
+    function htmlItem(lista, item, i) {
+      return `<div class="lista-item" data-lista="${lista.k}">
+        <div class="rejilla">${lista.campos.map((c) => {
+          let v = item[c.k];
+          if (c.lineas && Array.isArray(v)) v = v.join("\n");
+          return htmlCampo(c, v, `${lista.k}[${i}]`);
+        }).join("")}</div>
+        <div class="item-pie"><button class="btn peligro" type="button" data-quitar>Quitar ${esc(lista.nombre)}</button></div>
+      </div>`;
+    }
+
+    // Normaliza los elementos de cada lista al formato del formulario.
+    function itemsDe(lista) {
+      const v = Array.isArray(evento[lista.k]) ? evento[lista.k] : [];
+      return lista.par ? v.map((x) => Array.isArray(x) ? { hora: x[0], texto: x[1] } : x) : v;
+    }
+
+    function pintarFormEvento() {
+      const ev = { ...evento, fecha: String(evento.fecha || "").slice(0, 16), tema: evento.tema || "elegance" };
+      $("form-evento").innerHTML = SECCIONES.map((s) => `
+        <div class="tarjeta">
+          <h3>${esc(s.titulo)}</h3>
+          ${s.campos ? `<div class="rejilla">${s.campos.map((c) => htmlCampo(c, ev[c.k])).join("")}</div>` : ""}
+          ${s.lista ? `<div style="margin-top:${s.campos ? 14 : 0}px" data-contenedor="${s.lista.k}">${itemsDe(s.lista).map((it, i) => htmlItem(s.lista, it, i)).join("")}</div>
+            <button class="btn" type="button" data-agregar="${s.lista.k}">+ Agregar ${esc(s.lista.nombre)}</button>` : ""}
+        </div>`).join("") + `
+        <div class="barra-guardar">
+          <button class="btn principal" type="submit" id="guardar-evento">Guardar evento</button>
+          <a class="btn" href="../invitaciones/boda/" target="_blank" rel="noopener">Ver invitación ↗</a>
+          <span class="aviso" id="aviso-evento"></span>
+        </div>`;
+      eventoSinGuardar = false;
+    }
+
+    const listaPorClave = (k) => SECCIONES.find((s) => s.lista && s.lista.k === k).lista;
+
+    $("form-evento").addEventListener("click", (e) => {
+      const agregar = e.target.closest("[data-agregar]");
+      if (agregar) {
+        const lista = listaPorClave(agregar.dataset.agregar);
+        const cont = $("form-evento").querySelector(`[data-contenedor="${lista.k}"]`);
+        cont.insertAdjacentHTML("beforeend", htmlItem(lista, {}, cont.children.length));
+        cont.lastElementChild.querySelector("input, textarea").focus();
+        marcarCambios();
+      }
+      const quitar = e.target.closest("[data-quitar]");
+      if (quitar) { quitar.closest(".lista-item").remove(); marcarCambios(); }
+    });
+    $("form-evento").addEventListener("input", marcarCambios);
+    function marcarCambios() {
+      eventoSinGuardar = true;
+      if ($("aviso-evento")) aviso("aviso-evento", "Hay cambios sin guardar", "pend");
+    }
+
+    function leerFormEvento() {
+      const f = $("form-evento");
+      const val = (n) => (f.elements.namedItem(n)?.value ?? "").trim();
+      const datos = {};
+      SECCIONES.forEach((s) => {
+        (s.campos || []).forEach((c) => { datos[c.k] = val(c.k); });
+        if (!s.lista) return;
+        const items = [...f.querySelectorAll(`[data-lista="${s.lista.k}"]`)].map((div) => {
+          const o = {};
+          s.lista.campos.forEach((c) => {
+            const v = (div.querySelector(`[name$=".${c.k}"]`)?.value ?? "").trim();
+            o[c.k] = c.lineas ? v.split("\n").map((x) => x.trim()).filter(Boolean) : v;
+          });
+          return o;
+        }).filter((o) => Object.values(o).some((v) => Array.isArray(v) ? v.length : v));
+        datos[s.lista.k] = s.lista.par ? items.map((o) => [o.hora, o.texto]) : items;
+      });
+      if (datos.fecha && datos.fecha.length === 16) datos.fecha += ":00";
+      datos.whatsapp = datos.whatsapp.replace(/\D/g, "");
+      return datos;
+    }
+
+    $("form-evento").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const datos = leerFormEvento();
+      if (!datos.nombre1) { aviso("aviso-evento", "Falta el nombre 1.", "mal"); return; }
+      if (!datos.fecha) { aviso("aviso-evento", "Falta la fecha del evento.", "mal"); return; }
+      const boton = $("guardar-evento");
+      boton.disabled = true;
+      aviso("aviso-evento", "Guardando…");
+      try {
+        const res = await enviar({ accion: "guardarEvento", evento: datos });
+        evento = res.evento;
+        pintarFormEvento();
+        $("evento-migrar").hidden = true;
+        aviso("aviso-evento", `Guardado ✓ (${new Date().toLocaleTimeString("es-MX")}) — la invitación ya muestra los cambios.`, "ok");
+      } catch (err) {
+        aviso("aviso-evento", `No se pudo guardar: ${err.message}`, "mal");
+      } finally {
+        if ($("guardar-evento")) $("guardar-evento").disabled = false;
+      }
+    });
+
+    addEventListener("beforeunload", (e) => { if (eventoSinGuardar) { e.preventDefault(); e.returnValue = ""; } });
+
+    // ---------- Invitados ----------
+    let editando = null; // id del invitado que se está editando
+    const formInv = $("form-invitado");
+
+    function renderInvitados() {
+      const q = $("buscar-inv").value.trim().toLowerCase();
+      const visibles = filas.filter((f) => !q || f.nombre.toLowerCase().includes(q) || String(f.id).includes(q) || String(f.telefono).includes(q));
+      $("filas-inv").innerHTML = visibles.map((f) => `<tr>
+          <td>${esc(f.id)}</td>
+          <td>${esc(f.nombre)}</td>
+          <td class="num">${f.pases}</td>
+          <td>${esc(f.telefono || "—")}</td>
+          <td><div class="acciones">
+            <button class="btn" type="button" data-editar="${esc(f.id)}">Editar</button>
+            <button class="btn peligro" type="button" data-borrar="${esc(f.id)}">Eliminar</button>
+            ${botonesEnlace(f)}
+          </div></td>
+        </tr>`).join("") || `<tr><td colspan="5" class="sub">Aún no hay invitados</td></tr>`;
+    }
+
+    function limpiarFormInvitado() {
+      editando = null;
+      formInv.reset();
+      formInv.pases.value = 1;
+      $("form-invitado-titulo").textContent = "Agregar invitado";
+      $("guardar-invitado").textContent = "Agregar invitado";
+      $("cancelar-edicion").hidden = true;
+    }
+
+    $("filas-inv").addEventListener("click", async (e) => {
+      const ed = e.target.closest("[data-editar]");
+      if (ed) {
+        const f = filas.find((x) => String(x.id) === ed.dataset.editar);
+        editando = f.id;
+        formInv.nombre.value = f.nombre;
+        formInv.pases.value = f.pases;
+        formInv.telefono.value = f.telefono || "";
+        formInv.id.value = f.id;
+        $("form-invitado-titulo").textContent = `Editar: ${f.nombre}`;
+        $("guardar-invitado").textContent = "Guardar cambios";
+        $("cancelar-edicion").hidden = false;
+        aviso("aviso-invitado", "");
+        formInv.scrollIntoView({ behavior: "smooth", block: "start" });
+        formInv.nombre.focus();
+      }
+      const bo = e.target.closest("[data-borrar]");
+      if (bo) {
+        const f = filas.find((x) => String(x.id) === bo.dataset.borrar);
+        const aviso2 = f.confirmacion ? `\nYa había respondido (${f.confirmacion.asiste ? "confirmó" : "no asistirá"}).` : "";
+        if (!confirm(`¿Eliminar a "${f.nombre}"? Su enlace dejará de funcionar.${aviso2}`)) return;
+        bo.disabled = true;
+        try {
+          await enviar({ accion: "borrarInvitado", id: f.id });
+          if (editando === f.id) limpiarFormInvitado();
+          aviso("aviso-invitado", `"${f.nombre}" eliminado.`, "ok");
+          await cargar({ conservarEvento: true });
+        } catch (err) {
+          bo.disabled = false;
+          aviso("aviso-invitado", `No se pudo eliminar: ${err.message}`, "mal");
+        }
+      }
+    });
+
+    formInv.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const datos = {
+        nombre: formInv.nombre.value.trim(),
+        pases: Number(formInv.pases.value) || 1,
+        telefono: formInv.telefono.value.replace(/\D/g, ""),
+        id: formInv.id.value.trim(),
+      };
+      if (!datos.nombre) { aviso("aviso-invitado", "Falta el nombre.", "mal"); formInv.nombre.focus(); return; }
+      if (editando) datos.idAnterior = editando;
+      const boton = $("guardar-invitado");
+      boton.disabled = true;
+      aviso("aviso-invitado", "Guardando…");
+      try {
+        const res = await enviar({ accion: "guardarInvitados", invitados: [datos] });
+        const g = res.invitados[0];
+        aviso("aviso-invitado", `${editando ? "Guardado" : "Agregado"} ✓ ${g.nombre} — id ${g.id}`, "ok");
+        limpiarFormInvitado();
+        await cargar({ conservarEvento: true });
+      } catch (err) {
+        aviso("aviso-invitado", `No se pudo guardar: ${err.message}`, "mal");
+      } finally {
+        boton.disabled = false;
+      }
+    });
+    $("cancelar-edicion").addEventListener("click", () => { limpiarFormInvitado(); aviso("aviso-invitado", ""); });
+
+    $("agregar-varios").addEventListener("click", async () => {
+      const lineas = $("varios").value.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (!lineas.length) { aviso("aviso-varios", "Escribe al menos un invitado.", "mal"); return; }
+      const invitados = lineas.map((l) => {
+        const [nombre, pases, telefono] = l.split("|").map((x) => (x || "").trim());
+        return { nombre, pases: Number(pases) || 1, telefono: (telefono || "").replace(/\D/g, "") };
+      });
+      const boton = $("agregar-varios");
+      boton.disabled = true;
+      aviso("aviso-varios", `Agregando ${invitados.length}…`);
+      try {
+        const res = await enviar({ accion: "guardarInvitados", invitados });
+        $("varios").value = "";
+        aviso("aviso-varios", `Agregados ✓ ${res.invitados.length} invitados.`, "ok");
+        await cargar({ conservarEvento: true });
+      } catch (err) {
+        aviso("aviso-varios", `No se pudo agregar: ${err.message}`, "mal");
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    // ---------- Eventos generales ----------
     $("login").addEventListener("submit", (e) => {
       e.preventDefault();
       clave = $("clave").value;
       try { sessionStorage.setItem(CLAVE_KEY, clave); } catch {}
       cargar();
     });
-    $("recargar").addEventListener("click", cargar);
+    $("recargar").addEventListener("click", () => {
+      if (vista === "evento" && eventoSinGuardar && !confirm("Hay cambios sin guardar en el evento. ¿Descartarlos?")) return;
+      eventoSinGuardar = false;
+      cargar();
+    });
     // Salir: olvida la clave y vuelve a pedirla.
     $("salir").addEventListener("click", () => {
+      if (eventoSinGuardar && !confirm("Hay cambios sin guardar en el evento. ¿Salir de todos modos?")) return;
       clave = "";
       filas = [];
+      evento = {};
+      eventoSinGuardar = false;
       try { sessionStorage.removeItem(CLAVE_KEY); } catch {}
       $("filas").innerHTML = "";
+      $("filas-inv").innerHTML = "";
       $("clave").value = "";
+      abrirMenu(false);
       mostrarLogin("");
       $("clave").focus();
     });
-    $("buscar").addEventListener("input", render);
+    $("buscar").addEventListener("input", renderConfirmaciones);
+    $("buscar-inv").addEventListener("input", renderInvitados);
     document.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => {
       filtro = b.dataset.filtro;
       document.querySelectorAll("[data-filtro]").forEach((x) => x.classList.toggle("activo", x === b));
-      render();
+      renderConfirmaciones();
     }));
-    $("filas").addEventListener("click", async (e) => {
+    document.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-copiar]");
       if (!b) return;
       try { await navigator.clipboard.writeText(b.dataset.copiar); b.textContent = "¡Copiado!"; }
@@ -235,8 +673,10 @@
       setTimeout(() => { b.textContent = "Copiar enlace"; }, 1500);
     });
 
+    irAVista(location.hash.slice(1));
     if (clave) cargar(); else mostrarLogin("");
-    setInterval(() => { if (!$("panel").hidden) cargar(); }, 30000);
+    // Solo se actualiza sola la vista de confirmaciones (para no interrumpir la edición).
+    setInterval(() => { if (!$("app").hidden && vista === "confirmaciones") cargar({ conservarEvento: true }); }, 30000);
   })();
   </script>
 </body>

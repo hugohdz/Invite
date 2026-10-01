@@ -1,7 +1,7 @@
-// Invitación. Todo el contenido sale de archivos, no del código:
-//   /datos/evento.json    -> nombres, fecha, lugares, WhatsApp, tema, etc.
-//   /datos/invitados.txt  -> lista de invitados (se lee por el servidor con ?id=)
-//   /fotos/1.jpg, 2.jpg…  -> fotos, se muestran en orden numérico
+// Invitación. Todo el contenido sale de datos, no del código:
+//   Google Sheets, hoja "Evento" -> nombres, fecha, lugares, WhatsApp, tema… (se edita en el panel)
+//   /datos/evento.json           -> "confirmacionesUrl" (dónde está Google) y respaldo del evento
+//   /fotos/1.jpg, 2.jpg…         -> fotos, se muestran en orden numérico
 // El único parámetro de URL es ?id=<id del invitado>.
 //
 // Dos modos de funcionamiento:
@@ -39,9 +39,23 @@
       return;
     }
 
-    // El invitado se pide en paralelo: Google puede tardar unos segundos en responder
-    // y la invitación no debe quedarse en blanco mientras tanto.
-    const pedirInvitado = idInvitado ? buscarInvitado(idInvitado).catch(() => null) : Promise.resolve(null);
+    // Publicado: el evento y el invitado vienen de Google en UNA sola consulta.
+    // La primera respuesta puede tardar unos segundos (Google "despierta" el script);
+    // mientras tanto el sobre muestra "Cargando…".
+    let pedirInvitado;
+    if (publicado()) {
+      txt("sobre-para", "Cargando…");
+      const r = await obtener(`${evento.confirmacionesUrl}?accion=inicio&id=${encodeURIComponent(idInvitado)}`).catch(() => null);
+      if (r && r.evento && Object.keys(r.evento).length) {
+        evento = { ...evento, ...r.evento, confirmacionesUrl: evento.confirmacionesUrl };
+      }
+      if (r && "evento" in r) {
+        pedirInvitado = Promise.resolve(r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null);
+      }
+      txt("sobre-para", "Toca el sello para abrir");
+    }
+    // Local o script de Google anterior: el invitado se pide aparte, en paralelo.
+    if (!pedirInvitado) pedirInvitado = idInvitado ? buscarInvitado(idInvitado).catch(() => null) : Promise.resolve(null);
 
     // La galería puede forzar un tema en el iframe; la URL pública solo lleva ?id=.
     document.documentElement.dataset.tema = window.frameElement ? (params.get("tema") || evento.tema) : evento.tema;
