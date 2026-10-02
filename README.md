@@ -11,15 +11,21 @@ Todo se edita desde el **panel** (`panel/`, menú ☰), sin publicar nada:
 | Menú | Qué edita | Dónde se guarda |
 | --- | --- | --- |
 | **Confirmaciones** | (solo consulta) quién confirmó, enlaces y WhatsApp | hoja "Confirmaciones" |
-| **Evento** | nombres, fecha, color, textos, padres, ubicaciones, itinerario, vestimenta, regalos | hoja "Evento" |
+| **Evento** | qué secciones se muestran, nombres, fecha, color, textos, padres, ubicaciones, hospedaje, clima, itinerario, vestimenta, regalos | hoja "Evento" |
 | **Invitados** | agregar (uno o varios), editar y eliminar invitados | hoja "Invitados" |
 
 Lo único que requiere subir cambios a GitHub:
 - **Fotos** (`fotos/1.jpg` = portada, `2.jpg` = cuenta regresiva…): después ejecuta `python publicar.py`.
+  La sección de hospedaje usa `7.jpg` (con 7 fotos coincide con la de la confirmación; agrega una 8.ª
+  foto para que sea distinta), o la foto que se indique para cada hotel en el panel.
 - `datos/evento.json`: solo guarda `confirmacionesUrl` (la dirección del script de Google).
 
 El enlace de cada invitado es `https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>`.
 El panel genera ids difíciles de adivinar para que nadie vea otras invitaciones cambiando el enlace.
+
+El **clima de la semana** se consulta en [Open-Meteo](https://open-meteo.com/) (gratis, sin clave)
+con la ciudad que se escribe en el panel. Es el pronóstico de los próximos días, igual que la original,
+no el del día de la boda.
 
 ## Google Sheets
 

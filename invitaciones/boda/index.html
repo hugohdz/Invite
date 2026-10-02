@@ -25,9 +25,11 @@
     Estructura igual a la original:
     - .escena   = foto de fondo FIJA (data-foto = qué foto usa) y el contenido deslizándose encima.
                   La siguiente escena sube y tapa a la anterior, y su foto aparece desvaneciéndose.
-    - .dividida = foto a un costado y tarjeta con la información al otro (los lados se alternan).
+    - .dividida = foto a un costado y tarjeta con la información al otro (los lados se alternan
+                  solos según las secciones visibles).
     - .banda    = franja de color con texto.
     data-foto: "0" = 1.jpg, "1" = 2.jpg, ... "ultima" = la última foto de la carpeta.
+    data-seccion: clave con la que el panel (Evento > Secciones) muestra u oculta la sección.
   -->
   <main id="invitacion" class="invitacion">
 
@@ -45,7 +47,7 @@
     </section>
 
     <!-- 2. Bienvenida -->
-    <section class="banda">
+    <section class="banda" data-seccion="bienvenida">
       <p class="banda-texto" id="bienvenida" data-aos="fade-up"></p>
     </section>
 
@@ -57,7 +59,7 @@
     </section>
 
     <!-- 4. Cuenta regresiva sobre la foto 2 -->
-    <section class="escena">
+    <section class="escena" data-seccion="cuenta">
       <div class="escena-fondo oscuro"><img data-foto="1" alt=""></div>
       <div class="escena-frente abajo">
         <div class="contenido centro">
@@ -74,12 +76,12 @@
     </section>
 
     <!-- 5. Frase -->
-    <section class="banda">
+    <section class="banda" data-seccion="frase">
       <p class="banda-texto cursiva" id="frase" data-aos="fade-up"></p>
     </section>
 
     <!-- 6. Padres: foto 3 a la izquierda -->
-    <section class="dividida">
+    <section class="dividida" data-seccion="padres">
       <div class="dividida-foto"><img data-foto="2" alt=""></div>
       <div class="dividida-info">
         <div class="tarjeta-papel">
@@ -90,7 +92,7 @@
     </section>
 
     <!-- 7. Itinerario sobre la foto 4 -->
-    <section class="escena">
+    <section class="escena" data-seccion="itinerario">
       <div class="escena-fondo"><img data-foto="3" alt=""></div>
       <div class="escena-frente">
         <div class="contenido">
@@ -103,8 +105,8 @@
       </div>
     </section>
 
-    <!-- 8. Ubicaciones: foto 5 a la derecha -->
-    <section class="dividida invertida">
+    <!-- 8. Ubicaciones: foto 5 -->
+    <section class="dividida" data-seccion="lugares">
       <div class="dividida-foto"><img data-foto="4" alt=""></div>
       <div class="dividida-info">
         <div class="tarjeta-papel">
@@ -114,8 +116,34 @@
       </div>
     </section>
 
-    <!-- 9. Código de vestimenta: foto 6 a la izquierda -->
-    <section class="dividida">
+    <!-- 8b. Sugerencia de hospedaje: foto (la del hotel, si tiene) + carrusel de hoteles -->
+    <section class="dividida" data-seccion="hospedaje" id="seccion-hospedaje" hidden>
+      <div class="dividida-foto"><img data-foto="6" id="hospedaje-foto" alt=""></div>
+      <div class="dividida-info">
+        <div class="tarjeta-papel">
+          <h2 class="subtitulo" data-aos="fade-right">Sugerencia de</h2>
+          <p class="titulo hospedaje-titulo" data-aos="fade-down">Hospedaje</p>
+          <div class="hoteles" data-aos="fade-up">
+            <button type="button" class="hoteles-flecha izq" id="hotel-prev" aria-label="Hotel anterior">&#10094;</button>
+            <div class="hotel" id="hotel"></div>
+            <button type="button" class="hoteles-flecha der" id="hotel-next" aria-label="Hotel siguiente">&#10095;</button>
+          </div>
+          <div class="hoteles-puntos" id="hotel-puntos"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8c. Clima de la semana (pronóstico de Open-Meteo para la ciudad del evento) -->
+    <section class="banda clima" data-seccion="clima" id="seccion-clima" hidden>
+      <div class="tarjeta-papel">
+        <h2 class="titulo" data-aos="fade-down">Clima de la semana</h2>
+        <p class="clima-actual" id="clima-actual"></p>
+        <div class="clima-dias" id="clima-dias"></div>
+      </div>
+    </section>
+
+    <!-- 9. Código de vestimenta: foto 6 -->
+    <section class="dividida" data-seccion="vestimenta">
       <div class="dividida-foto"><img data-foto="5" alt=""></div>
       <div class="dividida-info">
         <div class="tarjeta-papel">
@@ -127,7 +155,7 @@
     </section>
 
     <!-- 10. Galería: todas las fotos en orden numérico. Al tocar una se abre el carrusel. -->
-    <section class="galeria" id="seccion-fotos" hidden>
+    <section class="galeria" id="seccion-fotos" data-seccion="galeria" hidden>
       <div class="galeria-titulo" data-aos="zoom-in">
         <h2 id="txt-fotos">Galería</h2>
         <p class="galeria-sub">de fotos</p>
@@ -137,14 +165,14 @@
     </section>
 
     <!-- 11. Mesa de regalos -->
-    <section class="banda clara">
+    <section class="banda clara" data-seccion="regalos">
       <h2 class="titulo" data-aos="fade-down">Mesa de regalos</h2>
       <p class="nota" data-aos="fade-up">Tu presencia es nuestro mejor regalo, pero si deseas tener un detalle con nosotros:</p>
       <div class="regalos" id="regalos" data-aos="zoom-in"></div>
     </section>
 
     <!-- 12. Confirmación sobre la última foto -->
-    <section class="escena" id="seccion-rsvp">
+    <section class="escena" id="seccion-rsvp" data-seccion="rsvp">
       <div class="escena-fondo oscuro"><img data-foto="ultima" alt=""></div>
       <div class="escena-frente">
         <div class="contenido">

@@ -65,11 +65,14 @@
     // La galería puede forzar un tema en el iframe; la URL pública solo lleva ?id=.
     document.documentElement.dataset.tema = window.frameElement ? (params.get("tema") || evento.tema) : evento.tema;
 
+    aplicarSecciones();
     rellenar();
     iniciarSobre();
     iniciarCuenta();
     iniciarAnimaciones();
+    iniciarClima();
     await cargarFotos();
+    iniciarHospedaje();
     iniciarCapas();
 
     invitado = await pedirInvitado;
@@ -114,6 +117,26 @@
     const res = await r.json();
     if (res.error) throw new Error(res.error);
     return res.confirmacion;
+  }
+
+  // ---------- Secciones (el panel las muestra u oculta: Evento > Secciones) ----------
+  // evento.secciones = { regalos: false, ... }; lo que no aparece está activo.
+  // Hospedaje y clima además necesitan datos (hoteles / ciudad) para mostrarse.
+  const activa = (k) => (evento.secciones || {})[k] !== false;
+
+  function aplicarSecciones() {
+    const conDatos = {
+      hospedaje: (evento.hospedaje || []).some((h) => h.nombre),
+      clima: !!String(evento.ciudadClima || "").trim(),
+    };
+    document.querySelectorAll("[data-seccion]").forEach((sec) => {
+      const k = sec.dataset.seccion;
+      if (k === "galeria") return; // se muestra al cargar las fotos
+      sec.hidden = !activa(k) || conDatos[k] === false;
+    });
+    // Las secciones con foto a un costado alternan el lado entre las que quedan visibles.
+    [...document.querySelectorAll(".dividida")].filter((d) => !d.hidden)
+      .forEach((d, i) => d.classList.toggle("invertida", i % 2 === 1));
   }
 
   // ---------- Contenido ----------
@@ -326,7 +349,7 @@
       fotos = [];
     }
     ponerFotosSecciones();
-    if (!fotos.length) return;
+    if (!fotos.length || !activa("galeria")) return;
 
     const cont = $("fotos");
     let n = 0;
@@ -378,12 +401,160 @@
     });
   }
 
+  // ---------- Sugerencia de hospedaje (carrusel de hoteles, como la original) ----------
+  // Cada hotel: { nombre, nota, mapa, foto }. "foto" es un enlace a una imagen o el número
+  // de una foto de la carpeta (8 = fotos/8.jpg). Sin foto se queda la de la sección.
+  let hoteles = [];
+  let hotelActual = 0;
+
+  function fotoDeHotel(h) {
+    const f = String(h.foto || "").trim();
+    if (/^\d+$/.test(f)) return fotos[Number(f) - 1] || "";
+    return /^https?:\/\//i.test(f) ? f : "";
+  }
+
+  function iniciarHospedaje() {
+    const sec = $("seccion-hospedaje");
+    if (sec.hidden) return;
+    hoteles = (evento.hospedaje || []).filter((h) => h.nombre);
+    const lado = sec.querySelector(".dividida-foto");
+    let img = $("hospedaje-foto");
+    if (!img) { // carpeta sin fotos: ponerFotosSecciones quitó la imagen
+      img = new Image();
+      img.id = "hospedaje-foto";
+      img.alt = "";
+      lado.appendChild(img);
+    }
+    const porDefecto = img.getAttribute("src") || "";
+    img.addEventListener("load", () => { img.classList.remove("cambiando"); refrescarAOS(); });
+
+    const mostrar = (i, hacia) => {
+      hotelActual = (i + hoteles.length) % hoteles.length;
+      const h = hoteles[hotelActual];
+      const caja = $("hotel");
+      const pintar = () => {
+        caja.innerHTML = `<h3>${esc(h.nombre)}</h3>${h.nota ? `<p>${esc(h.nota)}</p>` : ""}
+          ${h.mapa ? `<a class="btn linea" href="${esc(h.mapa)}" target="_blank" rel="noopener">Ir a Google Maps</a>` : ""}`;
+        caja.classList.remove("cambiando");
+      };
+      if (hacia) {
+        caja.style.setProperty("--hacia", `${hacia * -20}px`);
+        caja.classList.add("cambiando");
+        setTimeout(pintar, 300);
+      } else pintar();
+      [...$("hotel-puntos").children].forEach((p, n) => p.classList.toggle("activo", n === hotelActual));
+
+      // La foto de la sección cambia a la del hotel (si tiene).
+      const foto = fotoDeHotel(h) || porDefecto;
+      lado.hidden = !foto;
+      if (foto && img.getAttribute("src") !== foto) {
+        img.classList.add("cambiando");
+        setTimeout(() => { img.src = foto; }, hacia ? 300 : 0);
+      }
+    };
+
+    const varios = hoteles.length > 1;
+    $("hotel-prev").hidden = !varios;
+    $("hotel-next").hidden = !varios;
+    $("hotel-puntos").hidden = !varios;
+    hoteles.forEach((h, n) => {
+      const p = document.createElement("button");
+      p.type = "button";
+      p.setAttribute("aria-label", h.nombre);
+      p.addEventListener("click", () => { if (n !== hotelActual) mostrar(n, n > hotelActual ? 1 : -1); });
+      $("hotel-puntos").appendChild(p);
+    });
+    $("hotel-prev").addEventListener("click", () => mostrar(hotelActual - 1, -1));
+    $("hotel-next").addEventListener("click", () => mostrar(hotelActual + 1, 1));
+
+    // Deslizar con el dedo también cambia de hotel.
+    let x0 = null;
+    const tarjeta = sec.querySelector(".tarjeta-papel");
+    tarjeta.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+    tarjeta.addEventListener("pointerup", (e) => {
+      if (x0 === null || !varios) return;
+      const dx = e.clientX - x0;
+      x0 = null;
+      if (dx > 50) mostrar(hotelActual - 1, -1);
+      else if (dx < -50) mostrar(hotelActual + 1, 1);
+    });
+    mostrar(0, 0);
+  }
+
+  // ---------- Clima de la semana ----------
+  // Pronóstico de Open-Meteo (gratis y sin clave) para "ciudadClima": "Saltillo",
+  // "Saltillo, Coahuila" o coordenadas "25.42, -101.00". Igual que la original:
+  // clima actual + los próximos 3 días.
+  const ICONOS = {
+    sol: '<circle cx="24" cy="24" r="8"/><path d="M24 6v5M24 37v5M6 24h5M37 24h5M11.3 11.3l3.5 3.5M33.2 33.2l3.5 3.5M11.3 36.7l3.5-3.5M33.2 14.8l3.5-3.5"/>',
+    luna: '<path d="M30 8a16 16 0 1 0 10 25A13 13 0 0 1 30 8z"/>',
+    "sol-nube": '<path d="M17 9v3M8 18h3M10.6 11.6l2.1 2.1M23.4 11.6l-2.1 2.1"/><path d="M11.5 22a6 6 0 0 1 10.8-5"/><path d="M15 38h20a7 7 0 0 0 .6-14 10 10 0 0 0-19.2 2.6A5.7 5.7 0 0 0 15 38z"/>',
+    nube: '<path d="M13 36h23a8 8 0 0 0 .7-16 11.5 11.5 0 0 0-22 3A6.5 6.5 0 0 0 13 36z"/>',
+    niebla: '<path d="M13 28h23a8 8 0 0 0 .7-16 11.5 11.5 0 0 0-22 3A6.5 6.5 0 0 0 13 28z"/><path d="M10 34h28M10 40h28"/>',
+    llovizna: '<path d="M17 7v3M8 16h3M10.6 9.6l2.1 2.1M23.4 9.6l-2.1 2.1"/><path d="M11.5 20a6 6 0 0 1 10.8-5"/><path d="M15 33h20a7 7 0 0 0 .6-14 10 10 0 0 0-19.2 2.6A5.7 5.7 0 0 0 15 33z"/><path d="M19 37l-2 4M26 37l-2 4M33 37l-2 4"/>',
+    lluvia: '<path d="M13 30h23a8 8 0 0 0 .7-16 11.5 11.5 0 0 0-22 3A6.5 6.5 0 0 0 13 30z"/><path d="M16 35l-3 6M24 35l-3 6M32 35l-3 6"/>',
+    tormenta: '<path d="M13 28h23a8 8 0 0 0 .7-16 11.5 11.5 0 0 0-22 3A6.5 6.5 0 0 0 13 28z"/><path d="M25 30l-5 7h6l-4 7"/>',
+    nieve: '<path d="M13 28h23a8 8 0 0 0 .7-16 11.5 11.5 0 0 0-22 3A6.5 6.5 0 0 0 13 28z"/><path d="M17 35v6M14 38h6M31 35v6M28 38h6M24 39v6M21 42h6"/>',
+  };
+
+  // Códigos de clima WMO (los que usa Open-Meteo).
+  function iconoClima(codigo) {
+    const c = Number(codigo);
+    let k = "nube";
+    if (c === 0) k = "sol";
+    else if (c <= 2) k = "sol-nube";
+    else if (c === 45 || c === 48) k = "niebla";
+    else if (c >= 51 && c <= 57) k = "llovizna";
+    else if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) k = "lluvia";
+    else if ((c >= 71 && c <= 77) || c === 85 || c === 86) k = "nieve";
+    else if (c >= 95) k = "tormenta";
+    return `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[k]}</svg>`;
+  }
+
+  const sinAcentos = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+  async function ubicarCiudad(texto) {
+    const coords = texto.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (coords) return { lat: coords[1], lon: coords[2] };
+    const [nombre, ...resto] = texto.split(",").map((x) => x.trim()).filter(Boolean);
+    const r = await obtener(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nombre)}&count=10&language=es&format=json`);
+    const lista = r.results || [];
+    // "Saltillo, Coahuila": entre las ciudades con ese nombre, la del estado o país indicado.
+    const pista = sinAcentos(resto.join(" "));
+    const coincide = (v) => { const t = sinAcentos(v); return t && (t.includes(pista) || pista.includes(t)); };
+    const elegida = (pista && lista.find((c) => [c.admin1, c.country, c.country_code].some(coincide))) || lista[0];
+    if (!elegida) throw new Error(`No se encontró la ciudad "${texto}"`);
+    return { lat: elegida.latitude, lon: elegida.longitude };
+  }
+
+  async function iniciarClima() {
+    if ($("seccion-clima").hidden) return;
+    try {
+      const { lat, lon } = await ubicarCiudad(String(evento.ciudadClima));
+      const r = await obtener(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+        + "&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3");
+      txt("clima-actual", `Clima actual ${r.current.temperature_2m.toFixed(1)} °C`);
+      $("clima-dias").innerHTML = r.daily.time.map((dia, i) => {
+        const nombre = new Date(`${dia}T12:00:00`).toLocaleDateString("es-MX", { weekday: "long" });
+        const promedio = (r.daily.temperature_2m_max[i] + r.daily.temperature_2m_min[i]) / 2;
+        return `<div class="clima-dia" data-aos="fade-up" data-aos-delay="${i * 150}">
+          <span>${esc(nombre)}</span>${iconoClima(r.daily.weather_code[i])}<strong>${promedio.toFixed(1)}°C</strong>
+        </div>`;
+      }).join("");
+    } catch (e) {
+      console.error("Clima:", e);
+      $("clima-actual").hidden = true;
+      $("clima-dias").outerHTML = '<p class="clima-error">No se pudo obtener el clima. Intenta más tarde.</p>';
+    }
+    if (window.AOS) AOS.refreshHard(); // registra los días recién agregados
+  }
+
   // ---------- Capas al hacer scroll ----------
   // Cada escena tiene su foto fija; mientras sube por encima de la anterior, su foto
   // pasa de casi transparente y ampliada a nítida (--entrada de 0 a 1): el "desvanecimiento".
   // Los nombres de la portada se desvanecen hacia arriba al empezar a bajar.
   function iniciarCapas() {
-    const escenas = [...document.querySelectorAll(".escena")];
+    const escenas = [...document.querySelectorAll(".escena")].filter((e) => !e.hidden);
     const textosPortada = $("portada-textos");
     let pendiente = false;
 

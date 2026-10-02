@@ -188,6 +188,36 @@ body.cerrado .nombres { animation-play-state: paused; }
 .regalos { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .cuenta-banco { width: 100%; margin-top: 12px; font-size: 14px; }
 
+/* ---------- Sugerencia de hospedaje (carrusel de hoteles, como la original) ---------- */
+.dividida-foto img { transition: opacity .45s ease; }
+.dividida-foto img.cambiando { opacity: 0; }
+#seccion-hospedaje .tarjeta-papel { text-align: center; }
+#seccion-hospedaje .subtitulo { margin-bottom: 4px; }
+.hospedaje-titulo { margin-bottom: 18px; }
+.hoteles { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; }
+.hoteles-flecha { border: 0; background: none; color: var(--tinta); font-size: 24px; cursor: pointer; padding: 6px 0; }
+.hoteles-flecha[hidden] { display: block !important; visibility: hidden; }
+.hotel { min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .3s ease, transform .3s ease; }
+.hotel.cambiando { opacity: 0; transform: translateX(var(--hacia, 20px)); }
+.hotel h3 { margin: 0; font: 400 21px/1.3 "Bodoni Moda", serif; }
+.hotel p { margin: 6px 0 0; color: var(--suave); font-size: 14px; }
+.hotel .btn.linea { border-radius: 0; color: var(--tinta); border-color: var(--tinta); width: min(240px, 100%); font: 400 16px "Bodoni Moda", serif; letter-spacing: 0; box-shadow: 0 10px 20px rgba(0,0,0,.12); }
+.hoteles-puntos { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+.hoteles-puntos button { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%; background: var(--tinta); opacity: .25; cursor: pointer; transition: opacity .2s; }
+.hoteles-puntos button.activo { opacity: .8; }
+
+/* ---------- Clima de la semana ---------- */
+.clima { padding: 40px 20px; }
+.clima .tarjeta-papel { margin: 0 auto; text-align: center; }
+.clima .titulo { margin-bottom: 10px; }
+.clima-actual { margin: 0 0 18px; font: 400 22px "Bodoni Moda", serif; text-transform: uppercase; letter-spacing: .02em; }
+.clima-dias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 360px; margin: 0 auto; }
+.clima-dia { display: grid; justify-items: center; gap: 6px; font-family: "Bodoni Moda", serif; }
+.clima-dia span { font-size: 16px; }
+.clima-dia svg { width: 52px; height: 52px; }
+.clima-dia strong { font-weight: 400; font-size: 16px; }
+.clima-error { margin: 0; color: var(--suave); }
+
 /* ---------- Confirmación ---------- */
 #seccion-rsvp .tarjeta-papel { margin: 0 auto; }
 .rsvp { display: grid; gap: 12px; max-width: 360px; margin: 16px auto 0; text-align: left; }

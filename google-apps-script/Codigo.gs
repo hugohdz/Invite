@@ -2,7 +2,8 @@
  * Evento, invitados y confirmaciones de la invitación, en Google Sheets.
  *
  * El archivo de Google tiene tres hojas (se crean solas):
- *   - "Evento":         campo | valor     <- se edita desde el panel (menú Evento)
+ *   - "Evento":         campo | valor     <- se edita desde el panel (menú Evento, incluye qué
+ *                                            secciones se muestran, hospedaje y ciudad del clima)
  *   - "Invitados":      id | nombre | pases | telefono   <- panel (menú Invitados) o a mano
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
  *
@@ -27,13 +28,14 @@ const HOJA_CONFIRMACIONES = "Confirmaciones";
 const COL_EVENTO = ["campo", "valor"];
 const COL_INVITADOS = ["id", "nombre", "pases", "telefono"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
-// Campos del evento que son listas: se guardan como JSON en la columna "valor".
-const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos"];
+// Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
+const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
+const CAMPOS_OBJETO = ["secciones"]; // { regalos: false, ... } = secciones ocultas en la invitación
 // Campos que acepta el formulario del panel (cualquier otro se ignora).
 const CAMPOS_EVENTO = [
   "tema", "eyebrow", "nombre1", "nombre2", "iniciales", "fecha", "whatsapp",
   "bienvenida", "frase", "tituloPadres", "vestimenta", "vestimentaNota", "tituloFotos",
-  "rsvpLimite", "cuentaBanco", ...CAMPOS_LISTA,
+  "rsvpLimite", "cuentaBanco", "ciudadClima", ...CAMPOS_LISTA, ...CAMPOS_OBJETO,
 ];
 
 function hoja_(nombre, columnas) {
@@ -66,6 +68,8 @@ function leerEvento_() {
     const valor = f[1] instanceof Date ? Utilities.formatDate(f[1], Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss") : String(f[1]);
     if (CAMPOS_LISTA.includes(campo)) {
       try { ev[campo] = JSON.parse(valor || "[]"); } catch (e) { ev[campo] = []; }
+    } else if (CAMPOS_OBJETO.includes(campo)) {
+      try { ev[campo] = JSON.parse(valor || "{}"); } catch (e) { ev[campo] = {}; }
     } else {
       ev[campo] = valor;
     }
@@ -74,9 +78,12 @@ function leerEvento_() {
 }
 
 function guardarEvento_(datos) {
+  const esObjeto = (v) => v && typeof v === "object" && !Array.isArray(v);
   const filas = CAMPOS_EVENTO.filter((c) => c in datos).map((c) => [
     c,
-    CAMPOS_LISTA.includes(c) ? JSON.stringify(Array.isArray(datos[c]) ? datos[c] : []) : texto_(datos[c]),
+    CAMPOS_LISTA.includes(c) ? JSON.stringify(Array.isArray(datos[c]) ? datos[c] : [])
+      : CAMPOS_OBJETO.includes(c) ? JSON.stringify(esObjeto(datos[c]) ? datos[c] : {})
+      : texto_(datos[c]),
   ]);
   const h = hoja_(HOJA_EVENTO, COL_EVENTO);
   if (h.getLastRow() > 1) h.getRange(2, 1, h.getLastRow() - 1, 2).clearContent();

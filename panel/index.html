@@ -81,6 +81,20 @@
     .nota-modo { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 12px 14px; }
     details summary { cursor: pointer; font-weight: 600; }
 
+    /* Secciones de la invitación (interruptores) */
+    .interruptores { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+    .interruptor { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--borde); border-radius: 10px; cursor: pointer; user-select: none; }
+    .interruptor input { position: absolute; opacity: 0; pointer-events: none; }
+    .interruptor .pista { flex-shrink: 0; width: 36px; height: 20px; border-radius: 99px; background: #d6d3d1; position: relative; transition: background .2s; }
+    .interruptor .pista::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+    .interruptor input:checked + .pista { background: var(--si); }
+    .interruptor input:checked + .pista::after { transform: translateX(16px); }
+    .interruptor input:focus-visible + .pista { outline: 2px solid var(--acento); outline-offset: 2px; }
+    .interruptor small { display: block; color: var(--suave); font-size: 11px; line-height: 1.3; }
+    .tarjeta.apagada > :not(h3) { opacity: .45; }
+    .tarjeta .oculta-aviso { display: none; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--borde); color: var(--suave); font-size: 11px; font-weight: 500; vertical-align: middle; }
+    .tarjeta.apagada .oculta-aviso { display: inline-block; }
+
     /* Acceso */
     .login { max-width: 340px; margin: 12vh auto; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 24px; display: grid; gap: 12px; }
     .login input { padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
@@ -362,7 +376,23 @@
 
     // ---------- Evento ----------
     const TEMAS = { elegance: "Dorado elegante", rose: "Rosa", noche: "Noche (oscuro)", salvia: "Verde salvia", lila: "Lila" };
-    // Secciones del formulario. "lista" = campos repetibles (padres, lugares, itinerario, regalos).
+    // Secciones de la invitación que se pueden ocultar (data-seccion en la invitación), en su orden.
+    const PARTES = [
+      { k: "bienvenida", label: "Mensaje de bienvenida" },
+      { k: "cuenta", label: "Cuenta regresiva" },
+      { k: "frase", label: "Frase" },
+      { k: "padres", label: "Padres" },
+      { k: "itinerario", label: "Itinerario" },
+      { k: "lugares", label: "Ubicaciones" },
+      { k: "hospedaje", label: "Sugerencia de hospedaje", ayuda: "Necesita al menos un hotel" },
+      { k: "clima", label: "Clima de la semana", ayuda: "Necesita la ciudad" },
+      { k: "vestimenta", label: "Código de vestimenta" },
+      { k: "galeria", label: "Galería de fotos" },
+      { k: "regalos", label: "Mesa de regalos" },
+      { k: "rsvp", label: "Confirmar asistencia" },
+    ];
+    // Secciones del formulario. "lista" = campos repetibles (padres, lugares, itinerario, regalos, hospedaje).
+    // "parte" = interruptor de PARTES que oculta esa sección en la invitación.
     const SECCIONES = [
       { titulo: "Novios y fecha", campos: [
         { k: "nombre1", label: "Nombre 1 *", ph: "Melissa" },
@@ -376,35 +406,46 @@
         { k: "bienvenida", label: "Mensaje de bienvenida", tipo: "textarea", ph: "El día más importante de\nnuestras vidas ha llegado", ancho: true },
         { k: "frase", label: "Frase", tipo: "textarea", ancho: true },
       ] },
-      { titulo: "Padres", campos: [
+      { titulo: "Padres", parte: "padres", campos: [
         { k: "tituloPadres", label: "Título de la sección", ph: "Con la bendición de nuestros padres", ancho: true },
       ], lista: { k: "padres", nombre: "grupo", campos: [
         { k: "titulo", label: "Título del grupo", ph: "Padres de la novia" },
         { k: "nombres", label: "Nombres (uno por línea)", tipo: "textarea", lineas: true },
       ] } },
-      { titulo: "Ubicaciones", lista: { k: "lugares", nombre: "ubicación", campos: [
+      { titulo: "Ubicaciones", parte: "lugares", lista: { k: "lugares", nombre: "ubicación", campos: [
         { k: "titulo", label: "Título", ph: "Ceremonia" },
         { k: "lugar", label: "Lugar", ph: "Jardín Las Rubelinas" },
         { k: "hora", label: "Hora", ph: "3:00 p. m." },
         { k: "direccion", label: "Dirección", ancho: true },
         { k: "mapa", label: "Enlace de Google Maps", tipo: "url", ancho: true },
       ] } },
-      { titulo: "Itinerario", lista: { k: "itinerario", nombre: "actividad", par: true, campos: [
+      { titulo: "Sugerencia de hospedaje", parte: "hospedaje", lista: { k: "hospedaje", nombre: "hotel", campos: [
+        { k: "nombre", label: "Hotel", ph: "Quinta Dorada Hotel & Suites" },
+        { k: "nota", label: "Nota (opcional)", ph: "Tarifa especial con el código BODA" },
+        { k: "mapa", label: "Enlace de Google Maps", tipo: "url", ancho: true },
+        { k: "foto", label: "Foto (opcional)", ph: "Ej.: 8  o  https://…/hotel.jpg", ancho: true, ayuda: "Enlace a una imagen del hotel, o el número de una foto de la carpeta fotos (8 = fotos/8.jpg). Vacío: se usa la foto de la sección." },
+      ] } },
+      { titulo: "Clima de la semana", parte: "clima", campos: [
+        { k: "ciudadClima", label: "Ciudad del evento", ph: "Saltillo, Coahuila", ancho: true, ayuda: "Muestra el clima actual y el pronóstico de los próximos días. También acepta coordenadas: 25.42, -101.00" },
+      ] },
+      { titulo: "Itinerario", parte: "itinerario", lista: { k: "itinerario", nombre: "actividad", par: true, campos: [
         { k: "hora", label: "Hora", ph: "15:00" },
         { k: "texto", label: "Actividad", ph: "Ceremonia civil" },
       ] } },
-      { titulo: "Código de vestimenta", campos: [
+      { titulo: "Código de vestimenta", parte: "vestimenta", campos: [
         { k: "vestimenta", label: "Vestimenta", ph: "Formal" },
         { k: "vestimentaNota", label: "Nota", ph: "Reservamos el color blanco para la novia." },
       ] },
-      { titulo: "Galería y regalos", campos: [
+      { titulo: "Galería", parte: "galeria", campos: [
         { k: "tituloFotos", label: "Título de la galería", ph: "Galería" },
-        { k: "cuentaBanco", label: "Datos para transferencia", ph: "CLABE 0000 0000 0000 0000 00" },
+      ] },
+      { titulo: "Mesa de regalos", parte: "regalos", campos: [
+        { k: "cuentaBanco", label: "Datos para transferencia", ph: "CLABE 0000 0000 0000 0000 00", ancho: true },
       ], lista: { k: "regalos", nombre: "mesa de regalos", campos: [
         { k: "texto", label: "Nombre", ph: "Liverpool" },
         { k: "url", label: "Enlace (opcional)", tipo: "url" },
       ] } },
-      { titulo: "Confirmación", campos: [
+      { titulo: "Confirmación", parte: "rsvp", campos: [
         { k: "rsvpLimite", label: "Texto de fecha límite", ph: "Por favor confirma antes del 15 de abril de 2027", ancho: true },
         { k: "whatsapp", label: "WhatsApp de los novios (con lada)", ph: "5218441234567", ayuda: "Para el botón \"Avisar por WhatsApp\"." },
       ] },
@@ -439,9 +480,19 @@
 
     function pintarFormEvento() {
       const ev = { ...evento, fecha: String(evento.fecha || "").slice(0, 16), tema: evento.tema || "elegance" };
-      $("form-evento").innerHTML = SECCIONES.map((s) => `
+      const visibles = evento.secciones || {};
+      const activa = (k) => visibles[k] !== false;
+      $("form-evento").innerHTML = `
         <div class="tarjeta">
-          <h3>${esc(s.titulo)}</h3>
+          <h3>Secciones de la invitación</h3>
+          <p class="sub" style="margin:-8px 0 12px">Apaga las secciones que no quieras mostrar. La portada y el saludo al invitado siempre aparecen.</p>
+          <div class="interruptores">${PARTES.map((p) => `
+            <label class="interruptor"><input type="checkbox" data-parte="${p.k}"${activa(p.k) ? " checked" : ""}><span class="pista"></span>
+              <span>${esc(p.label)}${p.ayuda ? `<small>${esc(p.ayuda)}</small>` : ""}</span></label>`).join("")}
+          </div>
+        </div>` + SECCIONES.map((s) => `
+        <div class="tarjeta${s.parte && !activa(s.parte) ? " apagada" : ""}"${s.parte ? ` data-tarjeta-parte="${s.parte}"` : ""}>
+          <h3>${esc(s.titulo)}${s.parte ? '<span class="oculta-aviso">Oculta en la invitación</span>' : ""}</h3>
           ${s.campos ? `<div class="rejilla">${s.campos.map((c) => htmlCampo(c, ev[c.k])).join("")}</div>` : ""}
           ${s.lista ? `<div style="margin-top:${s.campos ? 14 : 0}px" data-contenedor="${s.lista.k}">${itemsDe(s.lista).map((it, i) => htmlItem(s.lista, it, i)).join("")}</div>
             <button class="btn" type="button" data-agregar="${s.lista.k}">+ Agregar ${esc(s.lista.nombre)}</button>` : ""}
@@ -469,6 +520,12 @@
       if (quitar) { quitar.closest(".lista-item").remove(); marcarCambios(); }
     });
     $("form-evento").addEventListener("input", marcarCambios);
+    // Al apagar una sección, su tarjeta del formulario se ve atenuada.
+    $("form-evento").addEventListener("change", (e) => {
+      const k = e.target.dataset.parte;
+      if (!k) return;
+      $("form-evento").querySelectorAll(`[data-tarjeta-parte="${k}"]`).forEach((t) => t.classList.toggle("apagada", !e.target.checked));
+    });
     function marcarCambios() {
       eventoSinGuardar = true;
       if ($("aviso-evento")) aviso("aviso-evento", "Hay cambios sin guardar", "pend");
@@ -491,6 +548,8 @@
         }).filter((o) => Object.values(o).some((v) => Array.isArray(v) ? v.length : v));
         datos[s.lista.k] = s.lista.par ? items.map((o) => [o.hora, o.texto]) : items;
       });
+      datos.secciones = {};
+      f.querySelectorAll("[data-parte]").forEach((c) => { datos.secciones[c.dataset.parte] = c.checked; });
       if (datos.fecha && datos.fecha.length === 16) datos.fecha += ":00";
       datos.whatsapp = datos.whatsapp.replace(/\D/g, "");
       return datos;
@@ -509,6 +568,11 @@
         evento = res.evento;
         pintarFormEvento();
         $("evento-migrar").hidden = true;
+        // El script anterior ignora los campos que no conoce (secciones, hospedaje, ciudad del clima).
+        if (!("secciones" in res.evento)) {
+          aviso("aviso-evento", "Se guardó, pero las secciones, el hospedaje y el clima NO: el script de Google es la versión anterior. Pega el nuevo google-apps-script/Codigo.gs y publica una nueva versión.", "mal");
+          return;
+        }
         aviso("aviso-evento", `Guardado ✓ (${new Date().toLocaleTimeString("es-MX")}) — la invitación ya muestra los cambios.`, "ok");
       } catch (err) {
         aviso("aviso-evento", `No se pudo guardar: ${err.message}`, "mal");
