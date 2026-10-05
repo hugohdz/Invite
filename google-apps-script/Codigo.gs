@@ -4,7 +4,8 @@
  * El archivo de Google tiene tres hojas (se crean solas):
  *   - "Evento":         campo | valor     <- se edita desde el panel (menú Evento, incluye qué
  *                                            secciones se muestran, hospedaje y ciudad del clima)
- *   - "Invitados":      id | nombre | pases | telefono   <- panel (menú Invitados) o a mano
+ *   - "Invitados":      id | nombre | pases | telefono | ninos   <- panel (menú Invitados) o a mano
+ *                       (pases = adultos; ninos = lugares para niños)
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
  *
  * El enlace de cada invitado es: https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>
@@ -26,7 +27,7 @@ const HOJA_EVENTO = "Evento";
 const HOJA_INVITADOS = "Invitados";
 const HOJA_CONFIRMACIONES = "Confirmaciones";
 const COL_EVENTO = ["campo", "valor"];
-const COL_INVITADOS = ["id", "nombre", "pases", "telefono"];
+const COL_INVITADOS = ["id", "nombre", "pases", "telefono", "ninos"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
 // Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
 const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
@@ -101,6 +102,7 @@ function leerInvitados_() {
       nombre: String(f[1]).trim(),
       pases: Math.max(1, Number(f[2]) || 1),
       telefono: String(f[3] || "").replace(/\D/g, ""),
+      ninos: Math.max(0, Number(f[4]) || 0),
     }));
 }
 
@@ -117,7 +119,7 @@ function nuevoId_(usados) {
 }
 
 /**
- * Agrega o modifica invitados. Cada elemento: { id?, idAnterior?, nombre, pases, telefono }.
+ * Agrega o modifica invitados. Cada elemento: { id?, idAnterior?, nombre, pases, ninos, telefono }.
  * - Sin id: se crea uno nuevo con id generado.
  * - Con idAnterior: se modifica esa fila (permite cambiar el id).
  */
@@ -125,6 +127,7 @@ function guardarInvitados_(lista) {
   const h = hoja_(HOJA_INVITADOS, COL_INVITADOS);
   h.getRange("A:A").setNumberFormat("@");
   h.getRange("D:D").setNumberFormat("@");
+  if (!h.getRange(1, 5).getValue()) h.getRange(1, 5).setValue("ninos").setFontWeight("bold"); // hojas creadas antes de los niños
   const valores = h.getDataRange().getValues();
   const ids = valores.map((f) => String(f[0]).trim()); // ids[0] es el encabezado
   const usados = new Set(ids.slice(1).filter(Boolean));
@@ -140,9 +143,10 @@ function guardarInvitados_(lista) {
     if (!id) id = fila > 0 ? anterior : nuevoId_(usados);
     if (id !== anterior && usados.has(id) && ids.indexOf(id) !== fila) throw new Error(`El id "${id}" ya está en uso`);
 
-    const datos = [id, nombre, Math.max(1, Math.min(50, Number(d.pases) || 1)), String(d.telefono || "").replace(/\D/g, "")];
+    const datos = [id, nombre, Math.max(1, Math.min(50, Number(d.pases) || 1)), String(d.telefono || "").replace(/\D/g, ""),
+      Math.max(0, Math.min(50, Number(d.ninos) || 0))];
     if (fila > 0) {
-      h.getRange(fila + 1, 1, 1, 4).setValues([datos]);
+      h.getRange(fila + 1, 1, 1, datos.length).setValues([datos]);
       usados.delete(anterior);
       ids[fila] = id;
     } else {
@@ -150,7 +154,7 @@ function guardarInvitados_(lista) {
       ids.push(id);
     }
     usados.add(id);
-    guardados.push({ id: datos[0], nombre: datos[1], pases: datos[2], telefono: datos[3] });
+    guardados.push({ id: datos[0], nombre: datos[1], pases: datos[2], telefono: datos[3], ninos: datos[4] });
   }
   return guardados;
 }
@@ -184,7 +188,7 @@ function confirmar_(d) {
   if (!inv) throw new Error("Invitación no encontrada");
 
   const asiste = !!d.asiste;
-  const personas = asiste ? Math.min(Math.max(Number(d.personas) || 1, 1), inv.pases) : 0;
+  const personas = asiste ? Math.min(Math.max(Number(d.personas) || 1, 1), inv.pases + inv.ninos) : 0; // adultos + niños
   const mensaje = texto_(d.mensaje, 500).replace(/[\r\n]+/g, " ");
   const ahora = new Date();
   const fila = [id, inv.nombre, asiste ? "si" : "no", personas, ahora, mensaje];
@@ -208,7 +212,7 @@ function doGet(e) {
   const buscarInvitado = () => {
     const inv = id ? leerInvitados_().find((x) => x.id === id) : null;
     return {
-      invitado: inv ? { id: inv.id, nombre: inv.nombre, pases: inv.pases } : null, // sin teléfono: esto es público
+      invitado: inv ? { id: inv.id, nombre: inv.nombre, pases: inv.pases, ninos: inv.ninos } : null, // sin teléfono: esto es público
       confirmacion: inv ? leerConfirmaciones_()[id] || null : null,
     };
   };

@@ -12,7 +12,7 @@ Todo se edita desde el **panel** (`panel/`, menú ☰), sin publicar nada:
 | --- | --- | --- |
 | **Confirmaciones** | (solo consulta) quién confirmó, enlaces y WhatsApp | hoja "Confirmaciones" |
 | **Evento** | qué secciones se muestran, nombres, fecha, color, textos, padres, ubicaciones, hospedaje, clima, itinerario, vestimenta, regalos | hoja "Evento" |
-| **Invitados** | agregar (uno o varios), editar y eliminar invitados | hoja "Invitados" |
+| **Invitados** | agregar (uno o varios), editar y eliminar invitados con sus adultos y niños; total de personas | hoja "Invitados" |
 
 Lo único que requiere subir cambios a GitHub:
 - **Fotos** (`fotos/1.jpg` = portada, `2.jpg` = cuenta regresiva…): después ejecuta `python publicar.py`.

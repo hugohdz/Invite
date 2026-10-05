@@ -40,6 +40,8 @@
     .kpi b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
     .kpi span { color: var(--suave); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
     .kpi small { display: block; color: var(--suave); font-size: 12px; }
+    .kpi.total { border-color: var(--acento); }
+    .kpi.total b { color: var(--acento); }
     .si b { color: var(--si); } .no b { color: var(--no); } .pend b { color: var(--pend); }
     .barra { height: 10px; border-radius: 99px; overflow: hidden; display: flex; background: var(--borde); margin-bottom: 20px; }
     .barra div { transition: width .4s; }
@@ -174,11 +176,19 @@
       <section id="vista-invitados" data-titulo="Invitados" hidden>
         <p class="nota-modo" id="invitados-sin-google" hidden>Para editar invitados desde aquí, el panel debe estar conectado a Google Sheets. En modo local edita datos/invitados.txt.</p>
         <div id="invitados-editor">
+          <section class="kpis">
+            <div class="kpi"><span>Invitaciones</span><b id="t-inv">0</b><small>registradas</small></div>
+            <div class="kpi"><span>Adultos</span><b id="t-adultos">0</b></div>
+            <div class="kpi"><span>Niños</span><b id="t-ninos">0</b></div>
+            <div class="kpi total"><span>Total de personas</span><b id="t-total">0</b><small>adultos + niños</small></div>
+          </section>
+
           <form class="tarjeta" id="form-invitado" novalidate>
             <h3 id="form-invitado-titulo">Agregar invitado</h3>
             <div class="rejilla">
               <label class="campo ancho"><span>Nombre que aparece en la invitación *</span><input name="nombre" required maxlength="200" placeholder="Familia Pérez García"></label>
-              <label class="campo"><span>Pases (personas) *</span><input name="pases" type="number" min="1" max="50" value="1" required></label>
+              <label class="campo"><span>Adultos *</span><input name="pases" type="number" min="1" max="50" value="1" required></label>
+              <label class="campo"><span>Niños</span><input name="ninos" type="number" min="0" max="50" value="0"></label>
               <label class="campo"><span>Teléfono (WhatsApp, con lada)</span><input name="telefono" inputmode="tel" placeholder="5218441234567"></label>
               <label class="campo"><span>Id del enlace</span><input name="id" maxlength="60" placeholder="Se genera solo"><small>Déjalo vacío para crear uno difícil de adivinar.</small></label>
             </div>
@@ -191,8 +201,8 @@
 
           <details class="tarjeta" id="bloque-varios">
             <summary>Agregar varios a la vez</summary>
-            <p class="sub">Un invitado por línea: <code>Nombre | pases | teléfono</code>. Los pases y el teléfono son opcionales.</p>
-            <label class="campo"><textarea id="varios" rows="6" placeholder="Familia Pérez García | 4 | 5218441234567&#10;Sofía Hernández | 2&#10;Carlos Ruiz"></textarea></label>
+            <p class="sub">Un invitado por línea: <code>Nombre | adultos | niños | teléfono</code>. Adultos, niños y teléfono son opcionales.</p>
+            <label class="campo"><textarea id="varios" rows="6" placeholder="Familia Pérez García | 2 | 2 | 5218441234567&#10;Sofía Hernández | 2&#10;Carlos Ruiz"></textarea></label>
             <div class="acciones" style="margin-top:10px; align-items:center">
               <button class="btn principal" type="button" id="agregar-varios">Agregar todos</button>
               <span class="aviso" id="aviso-varios"></span>
@@ -202,7 +212,7 @@
           <div class="filtros"><input id="buscar-inv" type="search" placeholder="Buscar invitado..."></div>
           <div class="tabla-wrap">
             <table>
-              <thead><tr><th>ID</th><th>Invitado</th><th class="num">Pases</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>ID</th><th>Invitado</th><th class="num">Adultos</th><th class="num">Niños</th><th class="num">Total</th><th>Teléfono</th><th>Acciones</th></tr></thead>
               <tbody id="filas-inv"></tbody>
             </table>
           </div>
@@ -230,6 +240,10 @@
     const estadoDe = (c) => !c ? "pend" : c.asiste ? "si" : "no";
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const pers = (n) => `${n} ${n === 1 ? "persona" : "personas"}`;
+    // "pases" son los adultos; "ninos" los lugares para niños (hojas anteriores no tienen la columna).
+    const ninosDe = (f) => Number(f.ninos) || 0;
+    const lugares = (f) => f.pases + ninosDe(f);
+    const suma = (lista, fn) => lista.reduce((s, f) => s + fn(f), 0);
     const leer = async (url) => { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(url); return r.json(); };
 
     function aviso(id, texto, tipo) {
@@ -325,20 +339,21 @@
     // ---------- Confirmaciones ----------
     function renderConfirmaciones() {
       const total = filas.length;
-      const pases = filas.reduce((s, f) => s + f.pases, 0);
+      const pases = suma(filas, lugares);
+      const ninos = suma(filas, ninosDe);
       const si = filas.filter((f) => estadoDe(f.confirmacion) === "si");
       const no = filas.filter((f) => estadoDe(f.confirmacion) === "no");
       const pend = filas.filter((f) => estadoDe(f.confirmacion) === "pend");
       const personasSi = si.reduce((s, f) => s + f.confirmacion.personas, 0);
 
       $("k-inv").textContent = total;
-      $("k-pases").textContent = `${pers(pases)} invitadas`;
+      $("k-pases").textContent = `${pers(pases)} invitadas${ninos ? ` (${ninos} ${ninos === 1 ? "niño" : "niños"})` : ""}`;
       $("k-si").textContent = si.length;
       $("k-si-p").textContent = `${pers(personasSi)} asistirán`;
       $("k-no").textContent = no.length;
-      $("k-no-p").textContent = `${pers(no.reduce((s, f) => s + f.pases, 0))}`;
+      $("k-no-p").textContent = `${pers(suma(no, lugares))}`;
       $("k-pend").textContent = pend.length;
-      $("k-pend-p").textContent = `${pers(pend.reduce((s, f) => s + f.pases, 0))} por confirmar`;
+      $("k-pend-p").textContent = `${pers(suma(pend, lugares))} por confirmar`;
 
       const pct = (n) => (total ? (n / total) * 100 : 0) + "%";
       $("b-si").style.width = pct(si.length);
@@ -357,7 +372,7 @@
         return `<tr>
           <td>${esc(f.id)}</td>
           <td>${esc(f.nombre)}</td>
-          <td class="num">${f.pases}</td>
+          <td class="num">${lugares(f)}${ninosDe(f) ? `<div class="sub">${ninosDe(f)} ${ninosDe(f) === 1 ? "niño" : "niños"}</div>` : ""}</td>
           <td><span class="estado ${est}">${etiquetas[est]}</span>${c ? `<div class="sub">${esc(c.fecha)}</div>` : ""}</td>
           <td class="num">${c && c.asiste ? c.personas : "—"}</td>
           <td class="msg">${esc(c?.mensaje)}</td>
@@ -585,28 +600,38 @@
 
     // ---------- Invitados ----------
     let editando = null; // id del invitado que se está editando
+    const AVISO_SCRIPT_NINOS = "Se guardó, pero SIN los niños: el script de Google es la versión anterior. Pega el nuevo google-apps-script/Codigo.gs y publica una nueva versión.";
     const formInv = $("form-invitado");
 
     function renderInvitados() {
       const q = $("buscar-inv").value.trim().toLowerCase();
+      // Totales de toda la lista (no solo de la búsqueda).
+      $("t-inv").textContent = filas.length;
+      $("t-adultos").textContent = suma(filas, (f) => f.pases);
+      $("t-ninos").textContent = suma(filas, ninosDe);
+      $("t-total").textContent = suma(filas, lugares);
+
       const visibles = filas.filter((f) => !q || f.nombre.toLowerCase().includes(q) || String(f.id).includes(q) || String(f.telefono).includes(q));
       $("filas-inv").innerHTML = visibles.map((f) => `<tr>
           <td>${esc(f.id)}</td>
           <td>${esc(f.nombre)}</td>
           <td class="num">${f.pases}</td>
+          <td class="num">${ninosDe(f) || "—"}</td>
+          <td class="num"><b>${lugares(f)}</b></td>
           <td>${esc(f.telefono || "—")}</td>
           <td><div class="acciones">
             <button class="btn" type="button" data-editar="${esc(f.id)}">Editar</button>
             <button class="btn peligro" type="button" data-borrar="${esc(f.id)}">Eliminar</button>
             ${botonesEnlace(f)}
           </div></td>
-        </tr>`).join("") || `<tr><td colspan="5" class="sub">Aún no hay invitados</td></tr>`;
+        </tr>`).join("") || `<tr><td colspan="7" class="sub">${filas.length ? "Sin resultados" : "Aún no hay invitados"}</td></tr>`;
     }
 
     function limpiarFormInvitado() {
       editando = null;
       formInv.reset();
       formInv.pases.value = 1;
+      formInv.ninos.value = 0;
       $("form-invitado-titulo").textContent = "Agregar invitado";
       $("guardar-invitado").textContent = "Agregar invitado";
       $("cancelar-edicion").hidden = true;
@@ -619,6 +644,7 @@
         editando = f.id;
         formInv.nombre.value = f.nombre;
         formInv.pases.value = f.pases;
+        formInv.ninos.value = ninosDe(f);
         formInv.telefono.value = f.telefono || "";
         formInv.id.value = f.id;
         $("form-invitado-titulo").textContent = `Editar: ${f.nombre}`;
@@ -651,6 +677,7 @@
       const datos = {
         nombre: formInv.nombre.value.trim(),
         pases: Number(formInv.pases.value) || 1,
+        ninos: Math.max(0, Number(formInv.ninos.value) || 0),
         telefono: formInv.telefono.value.replace(/\D/g, ""),
         id: formInv.id.value.trim(),
       };
@@ -663,6 +690,7 @@
         const res = await enviar({ accion: "guardarInvitados", invitados: [datos] });
         const g = res.invitados[0];
         aviso("aviso-invitado", `${editando ? "Guardado" : "Agregado"} ✓ ${g.nombre} — id ${g.id}`, "ok");
+        if (!("ninos" in g) && datos.ninos) aviso("aviso-invitado", AVISO_SCRIPT_NINOS, "mal");
         limpiarFormInvitado();
         await cargar({ conservarEvento: true });
       } catch (err) {
@@ -676,9 +704,12 @@
     $("agregar-varios").addEventListener("click", async () => {
       const lineas = $("varios").value.split("\n").map((l) => l.trim()).filter(Boolean);
       if (!lineas.length) { aviso("aviso-varios", "Escribe al menos un invitado.", "mal"); return; }
+      // Nombre | adultos | niños | teléfono. Si el tercer dato es un teléfono (formato anterior
+      // "Nombre | pases | teléfono"), se toma como teléfono y los niños quedan en 0.
       const invitados = lineas.map((l) => {
-        const [nombre, pases, telefono] = l.split("|").map((x) => (x || "").trim());
-        return { nombre, pases: Number(pases) || 1, telefono: (telefono || "").replace(/\D/g, "") };
+        let [nombre, pases, ninos, telefono] = l.split("|").map((x) => (x || "").trim());
+        if (!telefono && String(ninos).replace(/\D/g, "").length >= 7) [ninos, telefono] = ["", ninos];
+        return { nombre, pases: Number(pases) || 1, ninos: Math.max(0, Number(ninos) || 0), telefono: (telefono || "").replace(/\D/g, "") };
       });
       const boton = $("agregar-varios");
       boton.disabled = true;
@@ -687,6 +718,7 @@
         const res = await enviar({ accion: "guardarInvitados", invitados });
         $("varios").value = "";
         aviso("aviso-varios", `Agregados ✓ ${res.invitados.length} invitados.`, "ok");
+        if (!("ninos" in res.invitados[0]) && invitados.some((i) => i.ninos)) aviso("aviso-varios", AVISO_SCRIPT_NINOS, "mal");
         await cargar({ conservarEvento: true });
       } catch (err) {
         aviso("aviso-varios", `No se pudo agregar: ${err.message}`, "mal");

@@ -214,13 +214,20 @@
     }
     $("saludo").hidden = false;
     txt("saludo-nombre", invitado.nombre);
-    txt("saludo-pases", invitado.pases === 1 ? "Hemos reservado 1 lugar para ti" : `Hemos reservado ${invitado.pases} lugares para ustedes`);
+    // "pases" son los adultos; "ninos" los lugares para niños.
+    const ninos = Number(invitado.ninos) || 0;
+    const lugares = invitado.pases + ninos;
+    const detalle = ninos
+      ? `: ${invitado.pases === 1 ? "1 adulto" : `${invitado.pases} adultos`} y ${ninos === 1 ? "1 niño" : `${ninos} niños`}`
+      : "";
+    txt("saludo-pases", lugares === 1 ? "Hemos reservado 1 lugar para ti" : `Hemos reservado ${lugares} lugares para ustedes${detalle}`);
     txt("sobre-para", `Para: ${invitado.nombre}`);
 
     const sel = $("rsvp-personas");
     sel.innerHTML = "";
-    for (let n = 1; n <= invitado.pases; n++) sel.add(new Option(n === 1 ? "1 persona" : `${n} personas`, n));
-    sel.value = invitado.pases;
+    for (let n = 1; n <= lugares; n++) sel.add(new Option(n === 1 ? "1 persona" : `${n} personas`, n));
+    sel.value = lugares;
+    if (ninos) txt("campo-personas-txt", "¿Cuántas personas asistirán? (contando a los niños)");
 
     if (invitado.confirmacion) mostrarEstado(invitado.confirmacion);
     else $("rsvp").hidden = false;
