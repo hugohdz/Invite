@@ -238,21 +238,17 @@
 
       <!-- ===== Vista: Fotos ===== -->
       <section id="vista-fotos" data-titulo="Fotos" hidden>
-        <p class="nota-modo" id="fotos-sin-google" hidden>Para subir fotos desde aquí, el panel debe estar conectado a Google Sheets. En modo local las fotos están en la carpeta fotos/.</p>
+        <p class="nota-modo" id="fotos-sin-google" hidden>Para subir fotos desde aquí, el panel debe estar conectado a Google Sheets. En modo local las fotos están en la carpeta fotos/ de tu PC.</p>
         <p class="nota-modo" id="fotos-script-viejo" hidden>Para subir fotos desde aquí, pega el nuevo <b>google-apps-script/Codigo.gs</b> en tu Apps Script y publica una nueva versión. Google te pedirá permiso para usar Drive: acéptalo.</p>
         <div id="fotos-editor">
           <div class="tarjeta">
             <h3>Subir fotos</h3>
-            <p class="sub" style="margin:-8px 0 12px">Se guardan en tu Google Drive, en la carpeta <a id="fotos-carpeta" target="_blank" rel="noopener">Fotos invitación</a>, y la invitación las muestra al momento. Antes de subirlas se reducen a 2000 px para que carguen rápido.</p>
+            <p class="sub" style="margin:-8px 0 12px">Se guardan en tu Google Drive, en la carpeta <a id="fotos-carpeta" target="_blank" rel="noopener">fotosinvitacion</a>, y la invitación las muestra al momento. Antes de subirlas se reducen a 2000 px para que carguen rápido.</p>
             <label class="zona-subir" id="zona-subir">
               <input type="file" id="fotos-archivo" accept="image/*" multiple>
               <b>Elegir fotos</b><span>o arrástralas aquí</span>
             </label>
             <p class="aviso" id="aviso-fotos" style="margin:10px 0 0"></p>
-            <div id="fotos-importar" hidden style="margin-top:12px">
-              <p class="sub" style="margin:0 0 8px" id="fotos-importar-txt"></p>
-              <button class="btn principal" type="button" id="importar-fotos">Pasar esas fotos a Google Drive</button>
-            </div>
           </div>
           <p class="sub">El orden importa: <b>1</b> portada · <b>2</b> cuenta regresiva · <b>3</b> padres · <b>4</b> itinerario · <b>5</b> ubicaciones · <b>6</b> vestimenta · <b>7</b> hospedaje · <b>la última</b> confirmación. Todas aparecen en la galería. Usa las flechas para moverlas.</p>
           <div class="fotos-grid" id="fotos-grid"></div>
@@ -790,7 +786,6 @@
       const carpeta = $("fotos-carpeta");
       if (res.carpetaFotos) carpeta.href = res.carpetaFotos; else carpeta.removeAttribute("href");
       renderFotos();
-      revisarImportar();
     }
 
     function papelesDe(i, n) {
@@ -815,20 +810,11 @@
         </div>`).join("") || `<p class="sub">Aún no hay fotos en Google Drive.</p>`;
     }
 
-    // Mientras Drive no tenga fotos, la invitación usa las de la carpeta fotos/ del sitio: se ofrece pasarlas.
-    async function revisarImportar() {
-      let locales = [];
-      if (!fotos.length) { try { locales = await leer("../datos/fotos.json"); } catch {} }
-      $("fotos-importar").hidden = !locales.length;
-      $("fotos-importar-txt").textContent = `La invitación todavía usa las ${locales.length} fotos de la carpeta fotos del sitio (git). Pásalas a Drive para administrarlas desde aquí:`;
-      $("importar-fotos").onclick = () => subirFotos(locales.map((ruta) => ({ ruta, name: ruta.split("/").pop() })));
-    }
-
     // Reduce la foto a MAX_LADO px y la convierte a JPEG. Devuelve el base64 sin el prefijo data:.
     function prepararFoto(archivo) {
       return new Promise((ok, mal) => {
         const img = new Image();
-        const url = archivo.ruta ? `../${archivo.ruta}` : URL.createObjectURL(archivo);
+        const url = URL.createObjectURL(archivo);
         img.onload = () => {
           const k = Math.min(1, MAX_LADO / Math.max(img.naturalWidth, img.naturalHeight));
           const lienzo = document.createElement("canvas");
@@ -838,7 +824,7 @@
           ctx.fillStyle = "#fff"; // PNG con transparencia
           ctx.fillRect(0, 0, lienzo.width, lienzo.height);
           ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
-          if (!archivo.ruta) URL.revokeObjectURL(url);
+          URL.revokeObjectURL(url);
           ok(lienzo.toDataURL("image/jpeg", 0.85).split(",")[1]);
         };
         img.onerror = () => mal(new Error(`no se pudo leer "${archivo.name}" (¿es una imagen?)`));
@@ -846,12 +832,10 @@
       });
     }
 
-    // archivos: File del selector, o { ruta, name } para las fotos que ya están en el sitio.
     async function subirFotos(archivos) {
       if (subiendo || !archivos.length) return;
       subiendo = true;
       $("zona-subir").classList.add("ocupada");
-      $("importar-fotos").disabled = true;
       let hechas = 0;
       try {
         for (const a of archivos) {
@@ -868,7 +852,6 @@
       } finally {
         subiendo = false;
         $("zona-subir").classList.remove("ocupada");
-        $("importar-fotos").disabled = false;
         $("fotos-archivo").value = "";
       }
     }

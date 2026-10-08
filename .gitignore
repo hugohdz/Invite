@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 datos/invitados_para_google.csv
 datos/invitados.json
+
+# Fotos: viven en Google Drive (carpeta fotosinvitacion). Copia local solo para servidor.py
+fotos/

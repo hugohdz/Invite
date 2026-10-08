@@ -8,7 +8,7 @@
  *                       (pases = adultos; ninos = lugares para niños)
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
  *
- * Las fotos viven en una carpeta de tu Google Drive ("Fotos invitación", se crea sola al subir
+ * Las fotos viven en una carpeta de tu Google Drive ("fotosinvitacion", se crea sola al subir
  * la primera desde el panel, menú Fotos) compartida como "cualquier persona con el enlace".
  * También puedes arrastrar fotos directo a esa carpeta: aparecen al final, en orden por nombre.
  *
@@ -35,7 +35,7 @@ const HOJA_CONFIRMACIONES = "Confirmaciones";
 const COL_EVENTO = ["campo", "valor"];
 const COL_INVITADOS = ["id", "nombre", "pases", "telefono", "ninos"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
-const NOMBRE_CARPETA_FOTOS = "Fotos invitación";
+const NOMBRE_CARPETA_FOTOS = "fotosinvitacion";
 // Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
 const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
 const CAMPOS_OBJETO = ["secciones"]; // { regalos: false, ... } = secciones ocultas en la invitación

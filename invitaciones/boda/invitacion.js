@@ -1,15 +1,14 @@
 // Invitación. Todo el contenido sale de datos, no del código:
 //   Google Sheets, hoja "Evento" -> nombres, fecha, lugares, WhatsApp, tema… (se edita en el panel)
 //   /datos/evento.json           -> solo "confirmacionesUrl" (dónde está el script de Google)
-//   Google Drive, carpeta "Fotos invitación" -> fotos, en el orden del panel (menú Fotos)
-//   /fotos/1.jpg, 2.jpg…         -> respaldo: solo si la carpeta de Drive está vacía (y en modo local)
+//   Google Drive, carpeta "fotosinvitacion" -> fotos, en el orden del panel (menú Fotos)
 // El único parámetro de URL es ?id=<id del invitado>.
 //
 // Dos modos de funcionamiento:
-//  - Local (python servidor.py): invitados, fotos y confirmaciones pasan por /api del servidor.
+//  - Local (python servidor.py): invitados, fotos (carpeta fotos/ de tu PC, fuera de git) y
+//    confirmaciones pasan por /api del servidor.
 //  - Publicado (GitHub Pages): si evento.json tiene "confirmacionesUrl", los invitados
-//    y las confirmaciones se leen/guardan en Google Sheets, y las fotos salen de Google Drive
-//    (o de datos/fotos.json, que genera publicar.py, si la carpeta de Drive está vacía).
+//    y las confirmaciones se leen/guardan en Google Sheets, y las fotos salen de Google Drive.
 (function () {
   "use strict";
 
@@ -359,9 +358,7 @@
       miniaturas = fotosDrive.map((f) => urlDrive(f.id, 900));
     } else {
       try {
-        let lista;
-        try { lista = await obtener(`${RAIZ}api/fotos`); }
-        catch { lista = await obtener(`${RAIZ}datos/fotos.json`); } // sitio estático
+        const lista = await obtener(`${RAIZ}api/fotos`); // modo local (servidor.py)
         fotos = lista.map((f) => RAIZ + f.replace(/^\//, ""));
       } catch {
         fotos = [];
