@@ -13,11 +13,16 @@ Todo se edita desde el **panel** (`panel/`, menú ☰), sin publicar nada:
 | **Confirmaciones** | (solo consulta) quién confirmó, enlaces y WhatsApp | hoja "Confirmaciones" |
 | **Evento** | qué secciones se muestran, nombres, fecha, color, textos, padres, ubicaciones, hospedaje, clima, itinerario, vestimenta, regalos | hoja "Evento" |
 | **Invitados** | agregar (uno o varios), editar y eliminar invitados con sus adultos y niños; total de personas | hoja "Invitados" |
+| **Fotos** | subir, ordenar y eliminar fotos (1 = portada, 2 = cuenta regresiva… la última = confirmación) | carpeta "Fotos invitación" de Google Drive |
+
+Las fotos se guardan en el Google Drive del dueño del script, en una carpeta compartida con
+"cualquier persona con el enlace" (si no, los invitados no las verían). También se pueden arrastrar
+directo a esa carpeta: aparecen al final, en orden por nombre. Mientras la carpeta esté vacía, la
+invitación usa las de la carpeta `fotos/` del repositorio (y el panel ofrece pasarlas a Drive).
+La sección de hospedaje usa la foto 7 (con 7 fotos coincide con la de la confirmación; agrega una 8.ª
+para que sea distinta), o la foto que se indique para cada hotel en el panel.
 
 Lo único que requiere subir cambios a GitHub:
-- **Fotos** (`fotos/1.jpg` = portada, `2.jpg` = cuenta regresiva…): después ejecuta `python publicar.py`.
-  La sección de hospedaje usa `7.jpg` (con 7 fotos coincide con la de la confirmación; agrega una 8.ª
-  foto para que sea distinta), o la foto que se indique para cada hotel en el panel.
 - `datos/evento.json`: solo guarda `confirmacionesUrl` (la dirección del script de Google).
 
 El enlace de cada invitado es `https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>`.

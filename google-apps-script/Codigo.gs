@@ -8,6 +8,10 @@
  *                       (pases = adultos; ninos = lugares para niños)
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
  *
+ * Las fotos viven en una carpeta de tu Google Drive ("Fotos invitación", se crea sola al subir
+ * la primera desde el panel, menú Fotos) compartida como "cualquier persona con el enlace".
+ * También puedes arrastrar fotos directo a esa carpeta: aparecen al final, en orden por nombre.
+ *
  * El enlace de cada invitado es: https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>
  *
  * Instalación / actualización:
@@ -20,6 +24,8 @@
  *       a datos/evento.json como "confirmacionesUrl".
  *     Si ya estaba implementado: Implementar > Gestionar implementaciones > lápiz (editar) >
  *       Versión: "Nueva versión" > Implementar. La URL no cambia.
+ *     Si Google pide permisos nuevos (por ejemplo, de Drive para las fotos), acéptalos:
+ *       "Revisar permisos" > tu cuenta > Configuración avanzada > Ir a … (no seguro) > Permitir.
  */
 
 const CLAVE_PANEL = "cambia-esta-clave";
@@ -29,6 +35,7 @@ const HOJA_CONFIRMACIONES = "Confirmaciones";
 const COL_EVENTO = ["campo", "valor"];
 const COL_INVITADOS = ["id", "nombre", "pases", "telefono", "ninos"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
+const NOMBRE_CARPETA_FOTOS = "Fotos invitación";
 // Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
 const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
 const CAMPOS_OBJETO = ["secciones"]; // { regalos: false, ... } = secciones ocultas en la invitación
@@ -201,11 +208,110 @@ function confirmar_(d) {
   return { asiste, personas, fecha: fecha_(ahora), mensaje };
 }
 
+// ---------- Fotos (carpeta de Google Drive) ----------
+// El id de la carpeta y el orden de las fotos (lista de ids) se guardan en las propiedades del script.
+const props_ = () => PropertiesService.getScriptProperties();
+const CACHE_FOTOS = "fotos";
+
+/** La carpeta de fotos; con crear=true la crea (y la comparte) si aún no existe. */
+function carpetaFotos_(crear) {
+  const id = props_().getProperty("carpetaFotos");
+  if (id) {
+    try {
+      const c = DriveApp.getFolderById(id);
+      if (!c.isTrashed()) return c;
+    } catch (e) { /* se borró: se crea otra */ }
+  }
+  if (!crear) return null;
+  const c = DriveApp.createFolder(NOMBRE_CARPETA_FOTOS);
+  compartir_(c);
+  props_().setProperty("carpetaFotos", c.getId());
+  return c;
+}
+
+function compartir_(archivo) {
+  try { archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
+  catch (e) { /* cuentas de empresa que no permiten compartir con enlace */ }
+}
+
+const ordenFotos_ = () => { try { return JSON.parse(props_().getProperty("ordenFotos") || "[]"); } catch (e) { return []; } };
+function guardarOrden_(ids) {
+  props_().setProperty("ordenFotos", JSON.stringify(ids));
+  CacheService.getScriptCache().remove(CACHE_FOTOS);
+}
+
+/**
+ * Fotos de la carpeta en orden: [{ id, nombre }]. Primero el orden guardado desde el panel;
+ * las que se subieron directo a Drive van al final, por nombre (2.jpg antes que 10.jpg).
+ * Se guarda en caché 5 minutos para que la invitación no espere a Drive.
+ */
+function leerFotos_() {
+  const cache = CacheService.getScriptCache();
+  const guardada = cache.get(CACHE_FOTOS);
+  if (guardada) return JSON.parse(guardada);
+
+  const carpeta = carpetaFotos_(false);
+  if (!carpeta) return [];
+  const archivos = {};
+  const it = carpeta.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    if (/^image\//.test(f.getMimeType())) archivos[f.getId()] = f;
+  }
+  const orden = ordenFotos_().filter((id) => archivos[id]);
+  const nuevas = Object.keys(archivos).filter((id) => !orden.includes(id))
+    .sort((a, b) => archivos[a].getName().localeCompare(archivos[b].getName(), "es", { numeric: true }));
+  nuevas.forEach((id) => compartir_(archivos[id])); // las que se arrastraron directo a la carpeta
+  const ids = orden.concat(nuevas);
+  if (nuevas.length || ids.length !== ordenFotos_().length) guardarOrden_(ids);
+
+  const fotos = ids.map((id) => ({ id, nombre: archivos[id].getName() }));
+  cache.put(CACHE_FOTOS, JSON.stringify(fotos), 300);
+  return fotos;
+}
+
+/** { nombre, tipo, datos (base64) } -> la foto nueva, al final de la lista. */
+function subirFoto_(d) {
+  const tipo = String(d.tipo || "");
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(tipo)) throw new Error("Solo se aceptan imágenes JPG, PNG, WEBP o GIF");
+  const nombre = texto_(d.nombre, 120) || "foto.jpg";
+  const blob = Utilities.newBlob(Utilities.base64Decode(String(d.datos || "")), tipo, nombre);
+  const archivo = carpetaFotos_(true).createFile(blob);
+  compartir_(archivo);
+  const ids = leerFotos_().map((f) => f.id).filter((id) => id !== archivo.getId());
+  guardarOrden_(ids.concat(archivo.getId()));
+  return { id: archivo.getId(), nombre: archivo.getName() };
+}
+
+/** Solo se pueden borrar (enviar a la papelera de Drive) fotos de la carpeta de la invitación. */
+function borrarFoto_(id) {
+  const carpeta = carpetaFotos_(false);
+  let archivo = null;
+  try { archivo = DriveApp.getFileById(String(id)); } catch (e) { /* no existe */ }
+  const padres = archivo && archivo.getParents();
+  if (!carpeta || !padres || !padres.hasNext() || padres.next().getId() !== carpeta.getId()) {
+    throw new Error("Foto no encontrada");
+  }
+  archivo.setTrashed(true);
+  guardarOrden_(ordenFotos_().filter((x) => x !== id));
+}
+
+function ordenarFotos_(ids) {
+  const actuales = leerFotos_().map((f) => f.id);
+  const orden = ids.map(String).filter((id) => actuales.includes(id));
+  guardarOrden_(orden.concat(actuales.filter((id) => !orden.includes(id))));
+}
+
+function datosFotos_() {
+  const carpeta = carpetaFotos_(false);
+  return { fotos: leerFotos_(), carpetaFotos: carpeta ? carpeta.getUrl() : "" };
+}
+
 // ---------- Web ----------
-// GET ?accion=inicio&id=k7m2   -> evento + invitado + su confirmación (todo lo que necesita la invitación)
+// GET ?accion=inicio&id=k7m2   -> evento + invitado + su confirmación + fotos (todo lo que necesita la invitación)
 // GET ?accion=invitado&id=k7m2 -> invitado + su confirmación
 // GET ?accion=evento           -> solo el evento
-// GET ?accion=resumen&clave=X  -> invitados con su confirmación + evento (para el panel)
+// GET ?accion=resumen&clave=X  -> invitados con su confirmación + evento + fotos (para el panel)
 function doGet(e) {
   const p = e.parameter || {};
   const id = String(p.id || "").trim();
@@ -216,13 +322,13 @@ function doGet(e) {
       confirmacion: inv ? leerConfirmaciones_()[id] || null : null,
     };
   };
-  if (p.accion === "inicio") return json_({ evento: leerEvento_(), ...buscarInvitado() });
+  if (p.accion === "inicio") return json_({ evento: leerEvento_(), ...buscarInvitado(), fotos: leerFotos_() });
   if (p.accion === "invitado" || p.accion === "estado") return json_(buscarInvitado());
   if (p.accion === "evento") return json_({ evento: leerEvento_() });
   if (p.accion === "resumen") {
     if (p.clave !== CLAVE_PANEL) return json_({ error: "Clave incorrecta" });
     const conf = leerConfirmaciones_();
-    return json_({ evento: leerEvento_(), invitados: leerInvitados_().map((i) => ({ ...i, confirmacion: conf[i.id] || null })) });
+    return json_({ evento: leerEvento_(), invitados: leerInvitados_().map((i) => ({ ...i, confirmacion: conf[i.id] || null })), ...datosFotos_() });
   }
   return json_({ ok: true });
 }
@@ -232,6 +338,9 @@ function doGet(e) {
 //   { accion: "guardarEvento",   clave, evento: {...} }      -> panel
 //   { accion: "guardarInvitados", clave, invitados: [...] }  -> panel
 //   { accion: "borrarInvitado",  clave, id }                  -> panel
+//   { accion: "subirFoto",       clave, nombre, tipo, datos }  -> panel (datos = imagen en base64)
+//   { accion: "borrarFoto",      clave, id }                  -> panel
+//   { accion: "ordenarFotos",    clave, ids: [...] }          -> panel
 function doPost(e) {
   let d;
   try {
@@ -249,6 +358,9 @@ function doPost(e) {
     if (accion === "guardarEvento") return json_({ ok: true, evento: guardarEvento_(d.evento || {}) });
     if (accion === "guardarInvitados") return json_({ ok: true, invitados: guardarInvitados_(Array.isArray(d.invitados) ? d.invitados : []) });
     if (accion === "borrarInvitado") { borrarInvitado_(d.id); return json_({ ok: true }); }
+    if (accion === "subirFoto") return json_({ ok: true, foto: subirFoto_(d), ...datosFotos_() });
+    if (accion === "borrarFoto") { borrarFoto_(d.id); return json_({ ok: true, ...datosFotos_() }); }
+    if (accion === "ordenarFotos") { ordenarFotos_(Array.isArray(d.ids) ? d.ids : []); return json_({ ok: true, ...datosFotos_() }); }
     return json_({ error: "Acción desconocida" });
   } catch (err) {
     return json_({ error: err.message });

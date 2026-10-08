@@ -97,6 +97,22 @@
     .tarjeta .oculta-aviso { display: none; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--borde); color: var(--suave); font-size: 11px; font-weight: 500; vertical-align: middle; }
     .tarjeta.apagada .oculta-aviso { display: inline-block; }
 
+    /* Fotos */
+    .zona-subir { position: relative; display: grid; place-items: center; gap: 4px; padding: 26px 16px; border: 2px dashed var(--borde); border-radius: 12px; text-align: center; cursor: pointer; color: var(--suave); transition: border-color .2s, background .2s; }
+    .zona-subir b { color: var(--texto); }
+    .zona-subir.encima, .zona-subir:hover { border-color: var(--acento); background: #fbf8f3; }
+    .zona-subir input { position: absolute; opacity: 0; pointer-events: none; width: 1px; }
+    .zona-subir.ocupada { pointer-events: none; opacity: .6; }
+    .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .foto-item { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .foto-item .foto-img { position: relative; aspect-ratio: 4 / 5; background: var(--borde); }
+    .foto-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .foto-item .foto-num { position: absolute; top: 8px; left: 8px; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 99px; background: rgba(0,0,0,.7); color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+    .foto-item .foto-info { padding: 8px 10px 0; font-size: 12px; color: var(--suave); min-height: 26px; }
+    .foto-item .foto-info b { color: var(--acento); font-weight: 600; }
+    .foto-item .acciones { padding: 8px 10px 10px; justify-content: space-between; flex-wrap: nowrap; }
+    .foto-item .btn { padding: 6px 9px; }
+
     /* Acceso */
     .login { max-width: 340px; margin: 12vh auto; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 24px; display: grid; gap: 12px; }
     .login input { padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
@@ -128,6 +144,7 @@
       <a href="#confirmaciones" data-vista="confirmaciones"><span class="ico">✓</span> Confirmaciones</a>
       <a href="#evento" data-vista="evento"><span class="ico">✎</span> Evento</a>
       <a href="#invitados" data-vista="invitados"><span class="ico">☺</span> Invitados</a>
+      <a href="#fotos" data-vista="fotos"><span class="ico">▣</span> Fotos</a>
       <hr>
       <a href="../invitaciones/boda/" target="_blank" rel="noopener"><span class="ico">↗</span> Ver invitación</a>
       <button type="button" id="salir"><span class="ico">⎋</span> Salir</button>
@@ -218,6 +235,29 @@
           </div>
         </div>
       </section>
+
+      <!-- ===== Vista: Fotos ===== -->
+      <section id="vista-fotos" data-titulo="Fotos" hidden>
+        <p class="nota-modo" id="fotos-sin-google" hidden>Para subir fotos desde aquí, el panel debe estar conectado a Google Sheets. En modo local las fotos están en la carpeta fotos/.</p>
+        <p class="nota-modo" id="fotos-script-viejo" hidden>Para subir fotos desde aquí, pega el nuevo <b>google-apps-script/Codigo.gs</b> en tu Apps Script y publica una nueva versión. Google te pedirá permiso para usar Drive: acéptalo.</p>
+        <div id="fotos-editor">
+          <div class="tarjeta">
+            <h3>Subir fotos</h3>
+            <p class="sub" style="margin:-8px 0 12px">Se guardan en tu Google Drive, en la carpeta <a id="fotos-carpeta" target="_blank" rel="noopener">Fotos invitación</a>, y la invitación las muestra al momento. Antes de subirlas se reducen a 2000 px para que carguen rápido.</p>
+            <label class="zona-subir" id="zona-subir">
+              <input type="file" id="fotos-archivo" accept="image/*" multiple>
+              <b>Elegir fotos</b><span>o arrástralas aquí</span>
+            </label>
+            <p class="aviso" id="aviso-fotos" style="margin:10px 0 0"></p>
+            <div id="fotos-importar" hidden style="margin-top:12px">
+              <p class="sub" style="margin:0 0 8px" id="fotos-importar-txt"></p>
+              <button class="btn principal" type="button" id="importar-fotos">Pasar esas fotos a Google Drive</button>
+            </div>
+          </div>
+          <p class="sub">El orden importa: <b>1</b> portada · <b>2</b> cuenta regresiva · <b>3</b> padres · <b>4</b> itinerario · <b>5</b> ubicaciones · <b>6</b> vestimenta · <b>7</b> hospedaje · <b>la última</b> confirmación. Todas aparecen en la galería. Usa las flechas para moverlas.</p>
+          <div class="fotos-grid" id="fotos-grid"></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -234,6 +274,8 @@
     let filtro = "todos";
     let vista = "confirmaciones";
     let eventoSinGuardar = false;
+    let fotos = [];          // [{ id, nombre }] de la carpeta de Google Drive, en orden
+    let conFotos = false;    // el script de Google ya sabe manejar fotos
 
     // Rutas relativas: funciona igual en local y en GitHub Pages (/Invite/panel/).
     const enlace = (id) => new URL(`../invitaciones/boda/?id=${encodeURIComponent(id)}`, location.href).href;
@@ -257,7 +299,7 @@
       const r = await fetch(urlGoogle, { method: "POST", body: JSON.stringify({ ...datos, clave }) });
       const res = await r.json();
       // El script anterior trata todo POST como una confirmación y responde esto.
-      if (res.error === "Invitación no encontrada" && datos.accion) {
+      if ((res.error === "Invitación no encontrada" || res.error === "Acción desconocida") && datos.accion) {
         throw new Error("el script de Google es la versión anterior. Pega el nuevo google-apps-script/Codigo.gs y publica una nueva versión.");
       }
       if (res.error) throw new Error(res.error);
@@ -275,7 +317,7 @@
         if (res.error) return null;
         const hojaVacia = !res.evento || !Object.keys(res.evento).length;
         const { confirmacionesUrl, ...respaldo } = local;
-        return { invitados: res.invitados, evento: hojaVacia ? respaldo : res.evento, hojaVacia };
+        return { invitados: res.invitados, evento: hojaVacia ? respaldo : res.evento, hojaVacia, fotos: res };
       }
       const r = await fetch("../api/resumen", { headers: { "X-Clave": clave }, cache: "no-store" });
       if (r.status === 401) return null;
@@ -298,11 +340,15 @@
       $("app").hidden = false;
       renderConfirmaciones();
       renderInvitados();
+      recibirFotos(datos.fotos);
       const sinGoogle = !urlGoogle;
       $("evento-sin-google").hidden = !sinGoogle;
       $("invitados-sin-google").hidden = !sinGoogle;
       $("form-evento").hidden = sinGoogle;
       $("invitados-editor").hidden = sinGoogle;
+      $("fotos-sin-google").hidden = !sinGoogle;
+      $("fotos-script-viejo").hidden = sinGoogle || conFotos;
+      $("fotos-editor").hidden = sinGoogle || !conFotos;
       $("evento-migrar").hidden = !datos.hojaVacia;
       if (!conservarEvento && !eventoSinGuardar) { evento = datos.evento || {}; pintarFormEvento(); }
       $("actualizado").textContent = `Actualizado: ${new Date().toLocaleTimeString("es-MX")}`;
@@ -317,15 +363,16 @@
 
     // ---------- Menú y vistas ----------
     const menu = $("menu");
+    const VISTAS = ["confirmaciones", "evento", "invitados", "fotos"];
     function abrirMenu(abrir) {
       menu.classList.toggle("abierto", abrir);
       $("menu-fondo").hidden = !abrir;
       $("abrir-menu").setAttribute("aria-expanded", String(abrir));
     }
     function irAVista(nombre) {
-      if (!["confirmaciones", "evento", "invitados"].includes(nombre)) nombre = "confirmaciones";
+      if (!VISTAS.includes(nombre)) nombre = "confirmaciones";
       vista = nombre;
-      ["confirmaciones", "evento", "invitados"].forEach((v) => { $(`vista-${v}`).hidden = v !== nombre; });
+      VISTAS.forEach((v) => { $(`vista-${v}`).hidden = v !== nombre; });
       $("titulo-vista").textContent = $(`vista-${nombre}`).dataset.titulo;
       menu.querySelectorAll("[data-vista]").forEach((a) => a.classList.toggle("activo", a.dataset.vista === nombre));
       abrirMenu(false);
@@ -438,7 +485,7 @@
         { k: "nombre", label: "Hotel", ph: "Quinta Dorada Hotel & Suites" },
         { k: "nota", label: "Nota (opcional)", ph: "Tarifa especial con el código BODA" },
         { k: "mapa", label: "Enlace de Google Maps", tipo: "url", ancho: true },
-        { k: "foto", label: "Foto (opcional)", ph: "Ej.: 8  o  https://…/hotel.jpg", ancho: true, ayuda: "Enlace a una imagen del hotel, o el número de una foto de la carpeta fotos (8 = fotos/8.jpg). Vacío: se usa la foto de la sección." },
+        { k: "foto", label: "Foto (opcional)", ph: "Ej.: 8  o  https://…/hotel.jpg", ancho: true, ayuda: "Enlace a una imagen del hotel, o el número de una foto de la galería (8 = la 8.ª foto del menú Fotos). Vacío: se usa la foto de la sección." },
       ] } },
       { titulo: "Clima de la semana", parte: "clima", campos: [
         { k: "ciudadClima", label: "Ciudad del evento", ph: "Saltillo, Coahuila", ancho: true, ayuda: "Muestra el clima actual y el pronóstico de los próximos días. También acepta coordenadas: 25.42, -101.00" },
@@ -724,6 +771,149 @@
         aviso("aviso-varios", `No se pudo agregar: ${err.message}`, "mal");
       } finally {
         boton.disabled = false;
+      }
+    });
+
+    // ---------- Fotos (carpeta de Google Drive) ----------
+    // Qué sección de la invitación usa cada foto (data-foto en la invitación). La última es la de confirmación.
+    const PAPELES = ["Portada", "Cuenta regresiva", "Padres", "Itinerario", "Ubicaciones", "Vestimenta", "Hospedaje"];
+    const MAX_LADO = 2000;
+    const urlDrive = (id, ancho) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${ancho}`;
+    let subiendo = false;
+    let esperaOrden = null;
+
+    // res = respuesta del script (resumen o una acción de fotos): { fotos, carpetaFotos }
+    function recibirFotos(res) {
+      conFotos = !!res && Array.isArray(res.fotos);
+      if (!conFotos) return;
+      fotos = res.fotos;
+      const carpeta = $("fotos-carpeta");
+      if (res.carpetaFotos) carpeta.href = res.carpetaFotos; else carpeta.removeAttribute("href");
+      renderFotos();
+      revisarImportar();
+    }
+
+    function papelesDe(i, n) {
+      const p = PAPELES.filter((_, k) => k % n === i); // con pocas fotos se repiten
+      if (i === n - 1) p.push("Confirmación");
+      return p;
+    }
+
+    function renderFotos() {
+      const n = fotos.length;
+      $("fotos-grid").innerHTML = fotos.map((f, i) => `
+        <div class="foto-item">
+          <div class="foto-img"><img src="${urlDrive(f.id, 400)}" alt="${esc(f.nombre)}" loading="lazy"><span class="foto-num">${i + 1}</span></div>
+          <div class="foto-info">${papelesDe(i, n).map((p) => `<b>${esc(p)}</b>`).join(" · ") || "Galería"}</div>
+          <div class="acciones">
+            <span>
+              <button class="btn" type="button" data-mover="-1" data-i="${i}" ${i === 0 ? "disabled" : ""} aria-label="Mover antes">◀</button>
+              <button class="btn" type="button" data-mover="1" data-i="${i}" ${i === n - 1 ? "disabled" : ""} aria-label="Mover después">▶</button>
+            </span>
+            <button class="btn peligro" type="button" data-borrar-foto="${i}">Eliminar</button>
+          </div>
+        </div>`).join("") || `<p class="sub">Aún no hay fotos en Google Drive.</p>`;
+    }
+
+    // Mientras Drive no tenga fotos, la invitación usa las de la carpeta fotos/ del sitio: se ofrece pasarlas.
+    async function revisarImportar() {
+      let locales = [];
+      if (!fotos.length) { try { locales = await leer("../datos/fotos.json"); } catch {} }
+      $("fotos-importar").hidden = !locales.length;
+      $("fotos-importar-txt").textContent = `La invitación todavía usa las ${locales.length} fotos de la carpeta fotos del sitio (git). Pásalas a Drive para administrarlas desde aquí:`;
+      $("importar-fotos").onclick = () => subirFotos(locales.map((ruta) => ({ ruta, name: ruta.split("/").pop() })));
+    }
+
+    // Reduce la foto a MAX_LADO px y la convierte a JPEG. Devuelve el base64 sin el prefijo data:.
+    function prepararFoto(archivo) {
+      return new Promise((ok, mal) => {
+        const img = new Image();
+        const url = archivo.ruta ? `../${archivo.ruta}` : URL.createObjectURL(archivo);
+        img.onload = () => {
+          const k = Math.min(1, MAX_LADO / Math.max(img.naturalWidth, img.naturalHeight));
+          const lienzo = document.createElement("canvas");
+          lienzo.width = Math.round(img.naturalWidth * k);
+          lienzo.height = Math.round(img.naturalHeight * k);
+          const ctx = lienzo.getContext("2d");
+          ctx.fillStyle = "#fff"; // PNG con transparencia
+          ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+          ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+          if (!archivo.ruta) URL.revokeObjectURL(url);
+          ok(lienzo.toDataURL("image/jpeg", 0.85).split(",")[1]);
+        };
+        img.onerror = () => mal(new Error(`no se pudo leer "${archivo.name}" (¿es una imagen?)`));
+        img.src = url;
+      });
+    }
+
+    // archivos: File del selector, o { ruta, name } para las fotos que ya están en el sitio.
+    async function subirFotos(archivos) {
+      if (subiendo || !archivos.length) return;
+      subiendo = true;
+      $("zona-subir").classList.add("ocupada");
+      $("importar-fotos").disabled = true;
+      let hechas = 0;
+      try {
+        for (const a of archivos) {
+          aviso("aviso-fotos", `Subiendo ${hechas + 1} de ${archivos.length}: ${a.name}…`, "pend");
+          const datos = await prepararFoto(a);
+          const nombre = a.name.replace(/\.[^.]+$/, "") + ".jpg";
+          const res = await enviar({ accion: "subirFoto", nombre, tipo: "image/jpeg", datos });
+          hechas++;
+          recibirFotos(res);
+        }
+        aviso("aviso-fotos", `Listo ✓ ${hechas} ${hechas === 1 ? "foto subida" : "fotos subidas"}. La invitación ya las muestra.`, "ok");
+      } catch (err) {
+        aviso("aviso-fotos", `${hechas ? `Se subieron ${hechas}, pero ` : ""}no se pudo subir: ${err.message}`, "mal");
+      } finally {
+        subiendo = false;
+        $("zona-subir").classList.remove("ocupada");
+        $("importar-fotos").disabled = false;
+        $("fotos-archivo").value = "";
+      }
+    }
+
+    $("fotos-archivo").addEventListener("change", (e) => subirFotos([...e.target.files]));
+    const zona = $("zona-subir");
+    ["dragenter", "dragover"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.add("encima"); }));
+    ["dragleave", "drop"].forEach((t) => zona.addEventListener(t, () => zona.classList.remove("encima")));
+    zona.addEventListener("drop", (e) => {
+      e.preventDefault();
+      subirFotos([...e.dataTransfer.files].filter((f) => f.type.startsWith("image/")));
+    });
+
+    $("fotos-grid").addEventListener("click", async (e) => {
+      const mover = e.target.closest("[data-mover]");
+      if (mover) {
+        const i = Number(mover.dataset.i);
+        const j = i + Number(mover.dataset.mover);
+        [fotos[i], fotos[j]] = [fotos[j], fotos[i]];
+        renderFotos();
+        // Se guarda un momento después, para juntar varios movimientos seguidos.
+        aviso("aviso-fotos", "Guardando el orden…", "pend");
+        clearTimeout(esperaOrden);
+        esperaOrden = setTimeout(async () => {
+          try {
+            recibirFotos(await enviar({ accion: "ordenarFotos", ids: fotos.map((f) => f.id) }));
+            aviso("aviso-fotos", "Orden guardado ✓", "ok");
+          } catch (err) {
+            aviso("aviso-fotos", `No se pudo guardar el orden: ${err.message}`, "mal");
+          }
+        }, 800);
+        return;
+      }
+      const borrar = e.target.closest("[data-borrar-foto]");
+      if (borrar) {
+        const i = Number(borrar.dataset.borrarFoto);
+        if (!confirm(`¿Eliminar la foto ${i + 1}? Se enviará a la papelera de tu Google Drive.`)) return;
+        borrar.disabled = true;
+        try {
+          recibirFotos(await enviar({ accion: "borrarFoto", id: fotos[i].id }));
+          aviso("aviso-fotos", "Foto eliminada.", "ok");
+        } catch (err) {
+          borrar.disabled = false;
+          aviso("aviso-fotos", `No se pudo eliminar: ${err.message}`, "mal");
+        }
       }
     });
 

@@ -1,14 +1,15 @@
 // Invitación. Todo el contenido sale de datos, no del código:
 //   Google Sheets, hoja "Evento" -> nombres, fecha, lugares, WhatsApp, tema… (se edita en el panel)
 //   /datos/evento.json           -> solo "confirmacionesUrl" (dónde está el script de Google)
-//   /fotos/1.jpg, 2.jpg…         -> fotos, se muestran en orden numérico
+//   Google Drive, carpeta "Fotos invitación" -> fotos, en el orden del panel (menú Fotos)
+//   /fotos/1.jpg, 2.jpg…         -> respaldo: solo si la carpeta de Drive está vacía (y en modo local)
 // El único parámetro de URL es ?id=<id del invitado>.
 //
 // Dos modos de funcionamiento:
 //  - Local (python servidor.py): invitados, fotos y confirmaciones pasan por /api del servidor.
 //  - Publicado (GitHub Pages): si evento.json tiene "confirmacionesUrl", los invitados
-//    y las confirmaciones se leen/guardan en Google Sheets, y las fotos salen de
-//    datos/fotos.json (lo genera publicar.py).
+//    y las confirmaciones se leen/guardan en Google Sheets, y las fotos salen de Google Drive
+//    (o de datos/fotos.json, que genera publicar.py, si la carpeta de Drive está vacía).
 (function () {
   "use strict";
 
@@ -22,6 +23,7 @@
 
   let evento = null;
   let invitado = null;
+  let fotosDrive = []; // [{ id, nombre }] de la carpeta de Google Drive
 
   // ---------- Carga de datos ----------
   async function obtener(url) {
@@ -49,6 +51,7 @@
       if (r && r.evento && Object.keys(r.evento).length) {
         evento = { ...evento, ...r.evento, confirmacionesUrl: evento.confirmacionesUrl };
       }
+      if (r && Array.isArray(r.fotos)) fotosDrive = r.fotos;
       if (r && "evento" in r) {
         pedirInvitado = Promise.resolve(r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null);
       }
@@ -344,16 +347,26 @@
   // Patrón de la original (3 columnas): [chica + ancha], [3 medianas], [3 bajas] y se repite.
   const PATRON = [["alta", "ancha"], ["", "", ""], ["baja", "baja", "baja"]];
   const EFECTOS = ["fade-right", "zoom-in", "flip-left", "fade-up", "flip-right", "zoom-in", "fade-left", "flip-up"];
-  let fotos = [];
+  let fotos = [];      // tamaño completo (fondos y carrusel)
+  let miniaturas = []; // para la cuadrícula de la galería
+
+  // Imagen de Drive al ancho pedido (la foto debe estar compartida con "cualquier persona con el enlace").
+  const urlDrive = (id, ancho) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${ancho}`;
 
   async function cargarFotos() {
-    try {
-      let lista;
-      try { lista = await obtener(`${RAIZ}api/fotos`); }
-      catch { lista = await obtener(`${RAIZ}datos/fotos.json`); } // sitio estático
-      fotos = lista.map((f) => RAIZ + f.replace(/^\//, ""));
-    } catch {
-      fotos = [];
+    if (fotosDrive.length) {
+      fotos = fotosDrive.map((f) => urlDrive(f.id, 2000));
+      miniaturas = fotosDrive.map((f) => urlDrive(f.id, 900));
+    } else {
+      try {
+        let lista;
+        try { lista = await obtener(`${RAIZ}api/fotos`); }
+        catch { lista = await obtener(`${RAIZ}datos/fotos.json`); } // sitio estático
+        fotos = lista.map((f) => RAIZ + f.replace(/^\//, ""));
+      } catch {
+        fotos = [];
+      }
+      miniaturas = fotos;
     }
     ponerFotosSecciones();
     if (!fotos.length || !activa("galeria")) return;
@@ -372,7 +385,7 @@
         b.dataset.aosOffset = 80;
         b.setAttribute("aria-label", `Ver foto ${i + 1}`);
         const img = new Image();
-        img.src = fotos[i];
+        img.src = miniaturas[i];
         img.alt = `Foto ${i + 1}`;
         img.decoding = "async";
         img.addEventListener("load", refrescarAOS, { once: true });
@@ -391,7 +404,7 @@
     if (window.AOS) AOS.refreshHard();
   }
 
-  // data-foto="0" usa 1.jpg, "1" usa 2.jpg, ... "ultima" la última. Si hay menos fotos, se repiten.
+  // data-foto="0" usa la foto 1, "1" la foto 2, ... "ultima" la última. Si hay menos fotos, se repiten.
   function ponerFotosSecciones() {
     document.querySelectorAll("img[data-foto]").forEach((img) => {
       if (!fotos.length) {
@@ -410,7 +423,7 @@
 
   // ---------- Sugerencia de hospedaje (carrusel de hoteles, como la original) ----------
   // Cada hotel: { nombre, nota, mapa, foto }. "foto" es un enlace a una imagen o el número
-  // de una foto de la carpeta (8 = fotos/8.jpg). Sin foto se queda la de la sección.
+  // de una foto de la galería (8 = la 8.ª foto). Sin foto se queda la de la sección.
   let hoteles = [];
   let hotelActual = 0;
 
