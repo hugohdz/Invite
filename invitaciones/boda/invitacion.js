@@ -1,7 +1,8 @@
 // Invitación. Todo el contenido sale de datos, no del código:
 //   Google Sheets, hoja "Evento" -> nombres, fecha, lugares, WhatsApp, tema… (se edita en el panel)
 //   /datos/evento.json           -> solo "confirmacionesUrl" (dónde está el script de Google)
-//   Google Drive, carpeta "fotosinvitacion" -> fotos, en el orden del panel (menú Fotos)
+//   Google Drive, carpeta "fotosinvitacion" -> fotos, en el orden del panel (menú Fotos), en 3 grupos:
+//       invitacion (fondos de las secciones), galeria (carrusel con nota) y hospedaje (hoteles)
 // El único parámetro de URL es ?id=<id del invitado>.
 //
 // Dos modos de funcionamiento:
@@ -22,7 +23,7 @@
 
   let evento = null;
   let invitado = null;
-  let fotosDrive = []; // [{ id, nombre }] de la carpeta de Google Drive
+  let fotosDrive = null; // { invitacion, galeria, hospedaje: [{ id, nombre, nota }] } de Google Drive
 
   // ---------- Carga de datos ----------
   async function obtener(url) {
@@ -50,7 +51,9 @@
       if (r && r.evento && Object.keys(r.evento).length) {
         evento = { ...evento, ...r.evento, confirmacionesUrl: evento.confirmacionesUrl };
       }
-      if (r && Array.isArray(r.fotos)) fotosDrive = r.fotos;
+      // Script anterior: una sola lista (la misma para las secciones y la galería).
+      if (r && Array.isArray(r.fotos)) fotosDrive = { invitacion: r.fotos, galeria: r.fotos, hospedaje: [] };
+      else if (r && r.fotos) fotosDrive = r.fotos;
       if (r && "evento" in r) {
         pedirInvitado = Promise.resolve(r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null);
       }
@@ -342,20 +345,17 @@
     if (document.fonts) document.fonts.ready.then(refrescarAOS);
   }
 
-  // ---------- Galería de fotos ----------
-  // Patrón de la original (3 columnas): [chica + ancha], [3 medianas], [3 bajas] y se repite.
-  const PATRON = [["alta", "ancha"], ["", "", ""], ["baja", "baja", "baja"]];
-  const EFECTOS = ["fade-right", "zoom-in", "flip-left", "fade-up", "flip-right", "zoom-in", "fade-left", "flip-up"];
-  let fotos = [];      // tamaño completo (fondos y carrusel)
-  let miniaturas = []; // para la cuadrícula de la galería
+  // ---------- Fotos ----------
+  let fotos = [];   // fondos de las secciones (grupo "invitacion")
+  let galeria = []; // carrusel de la galería: [{ url, nota }]
 
   // Imagen de Drive al ancho pedido (la foto debe estar compartida con "cualquier persona con el enlace").
   const urlDrive = (id, ancho) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${ancho}`;
 
   async function cargarFotos() {
-    if (fotosDrive.length) {
-      fotos = fotosDrive.map((f) => urlDrive(f.id, 2000));
-      miniaturas = fotosDrive.map((f) => urlDrive(f.id, 900));
+    if (fotosDrive && fotosDrive.invitacion) {
+      fotos = fotosDrive.invitacion.map((f) => urlDrive(f.id, 2000));
+      galeria = (fotosDrive.galeria || []).map((f) => ({ url: urlDrive(f.id, 1200), nota: f.nota || "" }));
     } else {
       try {
         const lista = await obtener(`${RAIZ}api/fotos`); // modo local (servidor.py)
@@ -363,40 +363,11 @@
       } catch {
         fotos = [];
       }
-      miniaturas = fotos;
+      galeria = fotos.map((url) => ({ url, nota: "" }));
     }
     ponerFotosSecciones();
-    if (!fotos.length || !activa("galeria")) return;
-
-    const cont = $("fotos");
-    let n = 0;
-    for (let g = 0; n < fotos.length; g++) {
-      PATRON[g % PATRON.length].forEach((clase, col) => {
-        if (n >= fotos.length) return;
-        const i = n++;
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = `galeria-foto ${clase}`.trim();
-        b.dataset.aos = EFECTOS[i % EFECTOS.length];
-        b.dataset.aosDelay = col * 150;
-        b.dataset.aosOffset = 80;
-        b.setAttribute("aria-label", `Ver foto ${i + 1}`);
-        const img = new Image();
-        img.src = miniaturas[i];
-        img.alt = `Foto ${i + 1}`;
-        img.decoding = "async";
-        img.addEventListener("load", refrescarAOS, { once: true });
-        b.appendChild(img);
-        b.addEventListener("click", () => abrirCarrusel(i));
-        cont.appendChild(b);
-      });
-    }
-    // Si la última fila quedó incompleta, la última foto ocupa el espacio sobrante.
-    const usadas = [...cont.children].reduce((t, el) => t + (el.classList.contains("ancha") ? 2 : 1), 0);
-    const ultima = cont.lastElementChild;
-    if (usadas % 3 === 2) ultima.classList.add("ancha");
-    if (usadas % 3 === 1) ultima.style.gridColumn = "1 / -1";
-
+    if (!galeria.length || !activa("galeria")) return;
+    iniciarGaleria();
     $("seccion-fotos").hidden = false;
     if (window.AOS) AOS.refreshHard();
   }
@@ -419,15 +390,16 @@
   }
 
   // ---------- Sugerencia de hospedaje (carrusel de hoteles, como la original) ----------
-  // Cada hotel: { nombre, nota, mapa, foto }. "foto" es un enlace a una imagen o el número
-  // de una foto de la galería (8 = la 8.ª foto). Sin foto se queda la de la sección.
+  // Cada hotel: { nombre, nota, mapa, foto }. "foto" es el id de una foto del grupo "hospedaje" de Drive
+  // (se elige en el panel) o un enlace a una imagen. Sin foto se queda la de la sección.
   let hoteles = [];
   let hotelActual = 0;
 
   function fotoDeHotel(h) {
     const f = String(h.foto || "").trim();
-    if (/^\d+$/.test(f)) return fotos[Number(f) - 1] || "";
-    return /^https?:\/\//i.test(f) ? f : "";
+    if (/^https?:\/\//i.test(f)) return f;
+    if (/^\d+$/.test(f)) return fotos[Number(f) - 1] || ""; // versión anterior: número de foto
+    return /^[\w-]{20,}$/.test(f) ? urlDrive(f, 1600) : "";
   }
 
   function iniciarHospedaje() {
@@ -444,6 +416,8 @@
     }
     const porDefecto = img.getAttribute("src") || "";
     img.addEventListener("load", () => { img.classList.remove("cambiando"); refrescarAOS(); });
+    // Enlace que no es una imagen (por ejemplo, una página de Instagram): se usa la foto de la sección.
+    img.addEventListener("error", () => { if (porDefecto && img.getAttribute("src") !== porDefecto) img.src = porDefecto; });
 
     const mostrar = (i, hacia) => {
       hotelActual = (i + hoteles.length) % hoteles.length;
@@ -596,17 +570,22 @@
     actualizar();
   }
 
-  // ---------- Carrusel (misma transición que la original: sale, salta al otro lado y entra) ----------
-  const carrusel = $("carrusel");
+  // ---------- Galería: carrusel de fotos con nota (transición de la original: sale, salta al otro lado y entra) ----------
+  const MAX_PUNTOS = 12; // con más fotos se muestra "3 / 20" en lugar de puntos
   const slide = $("carrusel-slide");
   const imgCarrusel = $("carrusel-img");
+  const notaCarrusel = $("carrusel-nota");
   const puntos = $("carrusel-puntos");
   let actual = 0;
   let animando = false;
 
   function pintarPuntos() {
     puntos.innerHTML = "";
-    fotos.forEach((_, i) => {
+    if (galeria.length > MAX_PUNTOS) {
+      puntos.innerHTML = `<span class="carrusel-contador">${actual + 1} / ${galeria.length}</span>`;
+      return;
+    }
+    galeria.forEach((_, i) => {
       const p = document.createElement("button");
       p.type = "button";
       p.textContent = "•";
@@ -617,31 +596,35 @@
     });
   }
 
-  function abrirCarrusel(i) {
-    actual = i;
-    imgCarrusel.src = fotos[i];
-    slide.className = "carrusel-slide";
-    pintarPuntos();
-    carrusel.hidden = false;
-    document.body.style.overflow = "hidden";
+  function mostrarFoto(i) {
+    imgCarrusel.src = galeria[i].url;
+    imgCarrusel.alt = galeria[i].nota || `Foto ${i + 1}`;
+    notaCarrusel.textContent = galeria[i].nota;
+    new Image().src = galeria[(i + 1) % galeria.length].url; // la siguiente ya queda cargada
   }
 
-  function cerrarCarrusel() {
-    carrusel.hidden = true;
-    document.body.style.overflow = "";
+  function iniciarGaleria() {
+    const titulo = String(evento.tituloFotos || "").trim();
+    $("galeria-sub").hidden = !!titulo && titulo.toLowerCase() !== "galería"; // "Galería / de fotos"
+    const una = galeria.length < 2;
+    $("carrusel-prev").hidden = una;
+    $("carrusel-next").hidden = una;
+    imgCarrusel.addEventListener("load", refrescarAOS, { once: true });
+    mostrarFoto(0);
+    if (!una) pintarPuntos();
   }
 
   const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
   async function irA(i) {
-    if (animando || i === actual || !fotos.length) return;
+    if (animando || i === actual || galeria.length < 2) return;
     animando = true;
     const haciaAtras = i < actual;
     slide.className = `carrusel-slide ${haciaAtras ? "sale-der" : "sale-izq"}`;
     await esperar(450);
     slide.className = `carrusel-slide ${haciaAtras ? "desde-izq" : "desde-der"}`;
     actual = i;
-    imgCarrusel.src = fotos[i];
+    mostrarFoto(i);
     pintarPuntos();
     await esperar(60);
     slide.className = "carrusel-slide entra";
@@ -649,19 +632,11 @@
     animando = false;
   }
 
-  const siguiente = () => irA((actual + 1) % fotos.length);
-  const anterior = () => irA((actual - 1 + fotos.length) % fotos.length);
+  const siguiente = () => irA((actual + 1) % galeria.length);
+  const anterior = () => irA((actual - 1 + galeria.length) % galeria.length);
 
   $("carrusel-next").addEventListener("click", siguiente);
   $("carrusel-prev").addEventListener("click", anterior);
-  $("carrusel-cerrar").addEventListener("click", cerrarCarrusel);
-  carrusel.addEventListener("click", (e) => { if (e.target === carrusel) cerrarCarrusel(); });
-  addEventListener("keydown", (e) => {
-    if (carrusel.hidden) return;
-    if (e.key === "Escape") cerrarCarrusel();
-    if (e.key === "ArrowRight") siguiente();
-    if (e.key === "ArrowLeft") anterior();
-  });
 
   // Deslizar con el dedo o el mouse: más de 50 px cambia de foto.
   let inicioX = null;

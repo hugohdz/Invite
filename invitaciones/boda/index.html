@@ -154,13 +154,21 @@
       </div>
     </section>
 
-    <!-- 10. Galería: todas las fotos en orden numérico. Al tocar una se abre el carrusel. -->
+    <!-- 10. Galería: carrusel con las fotos del grupo "galeria" (panel, menú Fotos) y la nota de cada una.
+         El título es el nombre del carrusel. -->
     <section class="galeria" id="seccion-fotos" data-seccion="galeria" hidden>
       <div class="galeria-titulo" data-aos="zoom-in">
         <h2 id="txt-fotos">Galería</h2>
-        <p class="galeria-sub">de fotos</p>
+        <p class="galeria-sub" id="galeria-sub">de fotos</p>
       </div>
-      <div class="galeria-grid" id="fotos"></div>
+      <div class="carrusel-cuerpo" id="carrusel-cuerpo" data-aos="fade-up">
+        <button type="button" class="carrusel-flecha izq" id="carrusel-prev" aria-label="Foto anterior">&#10094;</button>
+        <figure class="carrusel-slide" id="carrusel-slide">
+          <div class="polaroid"><img id="carrusel-img" alt=""><figcaption id="carrusel-nota"></figcaption></div>
+        </figure>
+        <button type="button" class="carrusel-flecha der" id="carrusel-next" aria-label="Foto siguiente">&#10095;</button>
+      </div>
+      <div class="carrusel-puntos" id="carrusel-puntos"></div>
       <p class="galeria-iniciales" id="galeria-iniciales" data-aos="zoom-in"></p>
     </section>
 
@@ -207,19 +215,6 @@
       <p class="nota">¡Te esperamos!</p>
     </footer>
   </main>
-
-  <!-- Carrusel de fotos (se abre al tocar una foto de la galería) -->
-  <div id="carrusel" class="carrusel" hidden>
-    <button type="button" class="carrusel-cerrar" id="carrusel-cerrar" aria-label="Cerrar galería">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-    </button>
-    <div class="carrusel-cuerpo" id="carrusel-cuerpo">
-      <button type="button" class="carrusel-flecha izq" id="carrusel-prev" aria-label="Anterior">&#10094;</button>
-      <div class="carrusel-slide" id="carrusel-slide"><img id="carrusel-img" alt=""></div>
-      <button type="button" class="carrusel-flecha der" id="carrusel-next" aria-label="Siguiente">&#10095;</button>
-      <div class="carrusel-puntos" id="carrusel-puntos"></div>
-    </div>
-  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
   <script src="invitacion.js"></script>

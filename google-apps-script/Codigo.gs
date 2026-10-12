@@ -7,10 +7,13 @@
  *   - "Invitados":      id | nombre | pases | telefono | ninos   <- panel (menú Invitados) o a mano
  *                       (pases = adultos; ninos = lugares para niños)
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
+ *   - "Fotos":          id | grupo | nombre | nota   <- orden y notas de las fotos (panel, menú Fotos)
  *
  * Las fotos viven en una carpeta de tu Google Drive ("fotosinvitacion", se crea sola al subir
  * la primera desde el panel, menú Fotos) compartida como "cualquier persona con el enlace".
- * También puedes arrastrar fotos directo a esa carpeta: aparecen al final, en orden por nombre.
+ * Adentro hay una subcarpeta por grupo: invitacion (fondos de las secciones), galeria (carrusel)
+ * y hospedaje (hoteles). También puedes arrastrar fotos directo a una subcarpeta: aparecen al
+ * final de su grupo, en orden por nombre.
  *
  * El enlace de cada invitado es: https://hugohdz.github.io/Invite/invitaciones/boda/?id=<id>
  *
@@ -32,9 +35,11 @@ const CLAVE_PANEL = "cambia-esta-clave";
 const HOJA_EVENTO = "Evento";
 const HOJA_INVITADOS = "Invitados";
 const HOJA_CONFIRMACIONES = "Confirmaciones";
+const HOJA_FOTOS = "Fotos";
 const COL_EVENTO = ["campo", "valor"];
 const COL_INVITADOS = ["id", "nombre", "pases", "telefono", "ninos"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
+const COL_FOTOS = ["id", "grupo", "nombre", "nota"];
 const NOMBRE_CARPETA_FOTOS = "fotosinvitacion";
 // Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
 const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
@@ -56,6 +61,7 @@ function hoja_(nombre, columnas) {
     h.getRange(1, 1, 1, columnas.length).setFontWeight("bold");
     if (nombre === HOJA_INVITADOS) { h.getRange("A:A").setNumberFormat("@"); h.getRange("D:D").setNumberFormat("@"); }
     if (nombre === HOJA_EVENTO) h.getRange("A:B").setNumberFormat("@"); // sin conversiones automáticas (fechas)
+    if (nombre === HOJA_FOTOS) h.getRange("A:D").setNumberFormat("@");
   }
   return h;
 }
@@ -85,7 +91,9 @@ function leerEvento_() {
   return ev;
 }
 
-function guardarEvento_(datos) {
+/** Guarda los campos recibidos; los que no vienen se quedan como estaban. */
+function guardarEvento_(nuevos) {
+  const datos = { ...leerEvento_(), ...nuevos };
   const esObjeto = (v) => v && typeof v === "object" && !Array.isArray(v);
   const filas = CAMPOS_EVENTO.filter((c) => c in datos).map((c) => [
     c,
@@ -209,11 +217,17 @@ function confirmar_(d) {
 }
 
 // ---------- Fotos (carpeta de Google Drive) ----------
-// El id de la carpeta y el orden de las fotos (lista de ids) se guardan en las propiedades del script.
+// Carpeta "fotosinvitacion" con una subcarpeta por grupo (las fotos de un grupo no se mezclan con las de otro):
+//   invitacion -> fondos de las secciones (1 = portada, 2 = cuenta regresiva… la última = confirmación)
+//   galeria    -> el carrusel de la galería; cada foto puede llevar una nota
+//   hospedaje  -> fotos de los hoteles (cada hotel elige la suya en Evento > Hospedaje)
+// El orden y las notas se guardan en la hoja "Fotos" (id | grupo | nombre | nota), en orden.
+// El id de la carpeta principal se guarda en las propiedades del script.
+const GRUPOS_FOTOS = ["invitacion", "galeria", "hospedaje"];
 const props_ = () => PropertiesService.getScriptProperties();
-const CACHE_FOTOS = "fotos";
+const CACHE_FOTOS = "fotos-grupos";
 
-/** La carpeta de fotos; con crear=true la crea (y la comparte) si aún no existe. */
+/** La carpeta principal de fotos; con crear=true la crea (y la comparte) si aún no existe. */
 function carpetaFotos_(crear) {
   const id = props_().getProperty("carpetaFotos");
   if (id) {
@@ -229,77 +243,138 @@ function carpetaFotos_(crear) {
   return c;
 }
 
+function subcarpeta_(raiz, grupo, crear) {
+  const it = raiz.getFoldersByName(grupo);
+  if (it.hasNext()) return it.next();
+  if (!crear) return null;
+  const c = raiz.createFolder(grupo);
+  compartir_(c);
+  return c;
+}
+
 function compartir_(archivo) {
   try { archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
   catch (e) { /* cuentas de empresa que no permiten compartir con enlace */ }
 }
 
-const ordenFotos_ = () => { try { return JSON.parse(props_().getProperty("ordenFotos") || "[]"); } catch (e) { return []; } };
-function guardarOrden_(ids) {
-  props_().setProperty("ordenFotos", JSON.stringify(ids));
-  CacheService.getScriptCache().remove(CACHE_FOTOS);
+function imagenes_(carpeta) {
+  const lista = [];
+  const it = carpeta.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    if (/^image\//.test(f.getMimeType())) lista.push(f);
+  }
+  return lista;
 }
 
 /**
- * Fotos de la carpeta en orden: [{ id, nombre }]. Primero el orden guardado desde el panel;
- * las que se subieron directo a Drive van al final, por nombre (2.jpg antes que 10.jpg).
- * Se guarda en caché 5 minutos para que la invitación no espere a Drive.
+ * Fotos de cada grupo en orden: { invitacion: [{ id, nombre, nota }], galeria: [...], hospedaje: [...] }.
+ * Primero el orden de la hoja "Fotos"; las que se subieron directo a Drive van al final de su grupo,
+ * por nombre (2.jpg antes que 10.jpg). Se guarda en caché 5 minutos para que la invitación no espere a Drive.
  */
 function leerFotos_() {
   const cache = CacheService.getScriptCache();
   const guardada = cache.get(CACHE_FOTOS);
   if (guardada) return JSON.parse(guardada);
 
-  const carpeta = carpetaFotos_(false);
-  if (!carpeta) return [];
-  const archivos = {};
-  const it = carpeta.getFiles();
-  while (it.hasNext()) {
-    const f = it.next();
-    if (/^image\//.test(f.getMimeType())) archivos[f.getId()] = f;
-  }
-  const orden = ordenFotos_().filter((id) => archivos[id]);
-  const nuevas = Object.keys(archivos).filter((id) => !orden.includes(id))
-    .sort((a, b) => archivos[a].getName().localeCompare(archivos[b].getName(), "es", { numeric: true }));
-  nuevas.forEach((id) => compartir_(archivos[id])); // las que se arrastraron directo a la carpeta
-  const ids = orden.concat(nuevas);
-  if (nuevas.length || ids.length !== ordenFotos_().length) guardarOrden_(ids);
+  const grupos = { invitacion: [], galeria: [], hospedaje: [] };
+  const raiz = carpetaFotos_(false);
+  if (!raiz) return grupos;
 
-  const fotos = ids.map((id) => ({ id, nombre: archivos[id].getName() }));
-  cache.put(CACHE_FOTOS, JSON.stringify(fotos), 300);
-  return fotos;
+  // Las fotos sueltas en la carpeta principal (versión anterior, sin subcarpetas) pasan a "invitacion".
+  const sueltas = imagenes_(raiz);
+  if (sueltas.length) {
+    const destino = subcarpeta_(raiz, "invitacion", true);
+    sueltas.forEach((f) => f.moveTo(destino));
+  }
+  const archivos = {}; // id -> { archivo, grupo }
+  GRUPOS_FOTOS.forEach((g) => {
+    const sub = subcarpeta_(raiz, g, false);
+    if (sub) imagenes_(sub).forEach((f) => { archivos[f.getId()] = { archivo: f, grupo: g }; });
+  });
+
+  const hoja = hoja_(HOJA_FOTOS, COL_FOTOS);
+  let filas = hoja.getDataRange().getValues().slice(1).map((f) => ({ id: String(f[0]).trim(), nota: String(f[3] || "") }));
+  // Primera vez con la hoja: se respeta el orden que guardaba la versión anterior.
+  if (!filas.length) filas = ordenAnterior_().map((id) => ({ id, nota: "" }));
+
+  const vistos = new Set();
+  const agregar = (id, nota) => {
+    const a = archivos[id];
+    vistos.add(id);
+    grupos[a.grupo].push({ id, nombre: a.archivo.getName(), nota: nota || "" });
+  };
+  filas.forEach((f) => { if (archivos[f.id] && !vistos.has(f.id)) agregar(f.id, f.nota); });
+  Object.keys(archivos).filter((id) => !vistos.has(id))
+    .sort((a, b) => archivos[a].archivo.getName().localeCompare(archivos[b].archivo.getName(), "es", { numeric: true }))
+    .forEach((id) => { compartir_(archivos[id].archivo); agregar(id, ""); }); // las que se arrastraron directo a Drive
+
+  guardarFotos_(grupos);
+  return grupos;
 }
 
-/** { nombre, tipo, datos (base64) } -> la foto nueva, al final de la lista. */
+function ordenAnterior_() {
+  try { return JSON.parse(props_().getProperty("ordenFotos") || "[]"); } catch (e) { return []; }
+}
+
+/** Escribe la hoja "Fotos" (solo si cambió) y actualiza la caché. */
+function guardarFotos_(grupos) {
+  const filas = GRUPOS_FOTOS.flatMap((g) => grupos[g].map((f) => [f.id, g, f.nombre, f.nota]));
+  const hoja = hoja_(HOJA_FOTOS, COL_FOTOS);
+  const actuales = hoja.getDataRange().getValues().slice(1).map((f) => f.map(String));
+  if (JSON.stringify(actuales) !== JSON.stringify(filas)) {
+    if (hoja.getLastRow() > 1) hoja.getRange(2, 1, hoja.getLastRow() - 1, COL_FOTOS.length).clearContent();
+    if (filas.length) hoja.getRange(2, 1, filas.length, COL_FOTOS.length).setNumberFormat("@").setValues(filas);
+  }
+  CacheService.getScriptCache().put(CACHE_FOTOS, JSON.stringify(grupos), 300);
+}
+
+const grupoValido_ = (g) => {
+  if (!GRUPOS_FOTOS.includes(g)) throw new Error("Grupo de fotos desconocido");
+  return g;
+};
+
+/** { grupo, nombre, tipo, datos (base64) } -> la foto nueva, al final de su grupo. */
 function subirFoto_(d) {
+  const grupo = grupoValido_(d.grupo || "invitacion");
   const tipo = String(d.tipo || "");
   if (!/^image\/(jpeg|png|webp|gif)$/.test(tipo)) throw new Error("Solo se aceptan imágenes JPG, PNG, WEBP o GIF");
   const nombre = texto_(d.nombre, 120) || "foto.jpg";
   const blob = Utilities.newBlob(Utilities.base64Decode(String(d.datos || "")), tipo, nombre);
-  const archivo = carpetaFotos_(true).createFile(blob);
+  const archivo = subcarpeta_(carpetaFotos_(true), grupo, true).createFile(blob);
   compartir_(archivo);
-  const ids = leerFotos_().map((f) => f.id).filter((id) => id !== archivo.getId());
-  guardarOrden_(ids.concat(archivo.getId()));
-  return { id: archivo.getId(), nombre: archivo.getName() };
+  const grupos = leerFotos_();
+  if (!grupos[grupo].some((f) => f.id === archivo.getId())) { // la caché aún no la conocía
+    grupos[grupo].push({ id: archivo.getId(), nombre: archivo.getName(), nota: "" });
+    guardarFotos_(grupos);
+  }
+  return { id: archivo.getId(), nombre: archivo.getName(), grupo };
 }
 
 /** Solo se pueden borrar (enviar a la papelera de Drive) fotos de la carpeta de la invitación. */
 function borrarFoto_(id) {
-  const carpeta = carpetaFotos_(false);
-  let archivo = null;
-  try { archivo = DriveApp.getFileById(String(id)); } catch (e) { /* no existe */ }
-  const padres = archivo && archivo.getParents();
-  if (!carpeta || !padres || !padres.hasNext() || padres.next().getId() !== carpeta.getId()) {
-    throw new Error("Foto no encontrada");
-  }
-  archivo.setTrashed(true);
-  guardarOrden_(ordenFotos_().filter((x) => x !== id));
+  const grupos = leerFotos_();
+  const grupo = GRUPOS_FOTOS.find((g) => grupos[g].some((f) => f.id === id));
+  if (!grupo) throw new Error("Foto no encontrada");
+  DriveApp.getFileById(id).setTrashed(true);
+  grupos[grupo] = grupos[grupo].filter((f) => f.id !== id);
+  guardarFotos_(grupos);
 }
 
-function ordenarFotos_(ids) {
-  const actuales = leerFotos_().map((f) => f.id);
-  const orden = ids.map(String).filter((id) => actuales.includes(id));
-  guardarOrden_(orden.concat(actuales.filter((id) => !orden.includes(id))));
+function ordenarFotos_(grupo, ids) {
+  const grupos = leerFotos_();
+  const lista = grupos[grupoValido_(grupo)];
+  const orden = ids.map(String).map((id) => lista.find((f) => f.id === id)).filter(Boolean);
+  grupos[grupo] = orden.concat(lista.filter((f) => !orden.includes(f)));
+  guardarFotos_(grupos);
+}
+
+function guardarNota_(id, nota) {
+  const grupos = leerFotos_();
+  const foto = GRUPOS_FOTOS.flatMap((g) => grupos[g]).find((f) => f.id === id);
+  if (!foto) throw new Error("Foto no encontrada");
+  foto.nota = texto_(nota, 300).replace(/[\r\n]+/g, " ");
+  guardarFotos_(grupos);
 }
 
 function datosFotos_() {
@@ -338,9 +413,11 @@ function doGet(e) {
 //   { accion: "guardarEvento",   clave, evento: {...} }      -> panel
 //   { accion: "guardarInvitados", clave, invitados: [...] }  -> panel
 //   { accion: "borrarInvitado",  clave, id }                  -> panel
-//   { accion: "subirFoto",       clave, nombre, tipo, datos }  -> panel (datos = imagen en base64)
+//   { accion: "subirFoto",       clave, grupo, nombre, tipo, datos } -> panel (datos = imagen en base64)
 //   { accion: "borrarFoto",      clave, id }                  -> panel
-//   { accion: "ordenarFotos",    clave, ids: [...] }          -> panel
+//   { accion: "ordenarFotos",    clave, grupo, ids: [...] }   -> panel
+//   { accion: "notaFoto",        clave, id, nota }            -> panel (nota bajo la foto en la galería)
+//   (grupo = "invitacion", "galeria" u "hospedaje")
 function doPost(e) {
   let d;
   try {
@@ -360,7 +437,8 @@ function doPost(e) {
     if (accion === "borrarInvitado") { borrarInvitado_(d.id); return json_({ ok: true }); }
     if (accion === "subirFoto") return json_({ ok: true, foto: subirFoto_(d), ...datosFotos_() });
     if (accion === "borrarFoto") { borrarFoto_(d.id); return json_({ ok: true, ...datosFotos_() }); }
-    if (accion === "ordenarFotos") { ordenarFotos_(Array.isArray(d.ids) ? d.ids : []); return json_({ ok: true, ...datosFotos_() }); }
+    if (accion === "ordenarFotos") { ordenarFotos_(d.grupo, Array.isArray(d.ids) ? d.ids : []); return json_({ ok: true, ...datosFotos_() }); }
+    if (accion === "notaFoto") { guardarNota_(String(d.id), d.nota); return json_({ ok: true, ...datosFotos_() }); }
     return json_({ error: "Acción desconocida" });
   } catch (err) {
     return json_({ error: err.message });
@@ -374,4 +452,5 @@ function crearHojas() {
   hoja_(HOJA_EVENTO, COL_EVENTO);
   hoja_(HOJA_INVITADOS, COL_INVITADOS);
   hoja_(HOJA_CONFIRMACIONES, COL_CONFIRMACIONES);
+  hoja_(HOJA_FOTOS, COL_FOTOS);
 }

@@ -13,14 +13,14 @@ Todo se edita desde el **panel** (`panel/`, menú ☰), sin publicar nada:
 | **Confirmaciones** | (solo consulta) quién confirmó, enlaces y WhatsApp | hoja "Confirmaciones" |
 | **Evento** | qué secciones se muestran, nombres, fecha, color, textos, padres, ubicaciones, hospedaje, clima, itinerario, vestimenta, regalos | hoja "Evento" |
 | **Invitados** | agregar (uno o varios), editar y eliminar invitados con sus adultos y niños; total de personas | hoja "Invitados" |
-| **Fotos** | subir, ordenar y eliminar fotos (1 = portada, 2 = cuenta regresiva… la última = confirmación) | carpeta "fotosinvitacion" de Google Drive |
+| **Fotos** | subir, ordenar y eliminar fotos en 3 grupos: **Invitación** (fondos de las secciones: 1 = portada… la última = confirmación), **Galería** (carrusel con su nombre y una nota bajo cada foto) y **Hospedaje** (fotos de hoteles) | carpeta "fotosinvitacion" de Google Drive (una subcarpeta por grupo) + hoja "Fotos" (orden y notas) |
 
 Las fotos se guardan en el Google Drive del dueño del script, en una carpeta compartida con
 "cualquier persona con el enlace" (si no, los invitados no las verían). También se pueden arrastrar
-directo a esa carpeta: aparecen al final, en orden por nombre. Las fotos ya no están en el repositorio
-(la carpeta `fotos/` solo existe en tu PC para el modo local con `servidor.py`).
-La sección de hospedaje usa la foto 7 (con 7 fotos coincide con la de la confirmación; agrega una 8.ª
-para que sea distinta), o la foto que se indique para cada hotel en el panel.
+directo a una subcarpeta (invitacion, galeria u hospedaje): aparecen al final de su grupo, en orden
+por nombre. Las fotos ya no están en el repositorio (la carpeta `fotos/` solo existe en tu PC para el
+modo local con `servidor.py`). Cada hotel elige su foto en Evento → Sugerencia de hospedaje; sin foto
+se usa la 7.ª del grupo Invitación.
 
 Lo único que requiere subir cambios a GitHub:
 - `datos/evento.json`: solo guarda `confirmacionesUrl` (la dirección del script de Google).

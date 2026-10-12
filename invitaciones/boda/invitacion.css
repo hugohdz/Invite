@@ -248,43 +248,25 @@ body.cerrado .nombres { animation-play-state: paused; }
 .galeria { padding: 44px 20px 28px; background: var(--acento); color: var(--papel); text-align: center; overflow: hidden; }
 .galeria-titulo h2 { margin: 0; font: 400 clamp(52px, 14vw, 72px)/1 "Great Vibes", cursive; }
 .galeria-sub { margin: 6px 0 24px; letter-spacing: .35em; text-transform: uppercase; font-size: 13px; }
-.galeria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 520px; margin: 0 auto; }
-.galeria-foto { padding: 0; border: 0; background: none; cursor: zoom-in; overflow: hidden; border-radius: 2px; height: 11rem; box-shadow: 0 8px 18px rgba(0,0,0,.18); }
-.galeria-foto.ancha { grid-column: span 2; }
-.galeria-foto.alta { height: 13rem; }
-.galeria-foto.baja { height: 9.5rem; }
-.galeria-foto img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
-.galeria-foto:hover img { transform: scale(1.06); }
 .galeria-iniciales { margin: 28px 0 8px; font: 400 40px "Great Vibes", cursive; }
 
-/* ---------- Carrusel ---------- */
-.carrusel { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); animation: fundido .3s ease; }
-.carrusel-cerrar {
-  position: absolute; top: 12px; right: 12px; z-index: 2; width: 56px; height: 56px;
-  border: 0; background: none; color: rgba(255,255,255,.9); cursor: pointer;
-  animation: cerrarEntra .55s cubic-bezier(.34,1.56,.64,1) both;
-}
-.carrusel-cerrar svg { width: 30px; height: 30px; transition: transform .5s ease; }
-.carrusel-cerrar:hover svg { transform: rotate(90deg); }
-.carrusel-cuerpo { position: relative; width: 100%; max-width: 720px; min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 0 40px 48px; overflow: hidden; user-select: none; touch-action: pan-y; }
-.carrusel-slide { width: 100%; display: flex; justify-content: center; }
-.carrusel-slide img { width: 100%; max-width: 440px; max-height: 70vh; object-fit: cover; background: var(--papel); padding: 12px 12px 36px; box-shadow: 0 18px 40px rgba(0,0,0,.4); pointer-events: none; }
+/* ---------- Carrusel de la galería (foto tipo polaroid con la nota abajo) ---------- */
+.carrusel-cuerpo { position: relative; max-width: 480px; margin: 0 auto; padding: 0 36px; overflow: hidden; user-select: none; touch-action: pan-y; }
+.carrusel-slide { margin: 0; display: flex; justify-content: center; }
+.polaroid { width: 100%; max-width: 420px; background: var(--papel); color: var(--tinta); padding: 12px 12px 0; box-shadow: 0 18px 40px rgba(0,0,0,.3); }
+.polaroid img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: color-mix(in srgb, var(--tinta) 8%, transparent); pointer-events: none; }
+.polaroid figcaption { min-height: 46px; padding: 12px 4px 14px; font: italic 400 16px/1.4 "Bodoni Moda", serif; overflow-wrap: anywhere; }
 /* Fases de la transición (igual que la original): sale -> salta al otro lado -> entra */
 .carrusel-slide.sale-izq  { transform: translateX(-100%); opacity: 0; transition: all .45s ease-in-out; }
 .carrusel-slide.sale-der  { transform: translateX(100%);  opacity: 0; transition: all .45s ease-in-out; }
 .carrusel-slide.desde-der { transform: translateX(100%);  opacity: 0; transition: none; }
 .carrusel-slide.desde-izq { transform: translateX(-100%); opacity: 0; transition: none; }
 .carrusel-slide.entra     { transform: none; opacity: 1; transition: all .35s ease-out; }
-.carrusel-flecha { position: absolute; top: 45%; transform: translateY(-50%); z-index: 2; border: 0; background: none; color: #fff; font-size: 30px; cursor: pointer; padding: 8px; }
-.carrusel-flecha.izq { left: 4px; } .carrusel-flecha.der { right: 4px; }
-.carrusel-puntos { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 2px; }
-.carrusel-puntos button { border: 0; background: none; cursor: pointer; line-height: 1; font-size: 30px; color: rgba(255,255,255,.5); transition: all .2s; }
-.carrusel-puntos button.activo { color: #fff; font-size: 44px; }
-@keyframes fundido { from { opacity: 0; } }
-@keyframes cerrarEntra {
-  0% { opacity: 0; transform: scale(.5) rotate(-90deg); }
-  60% { opacity: 1; transform: scale(1.08) rotate(8deg); }
-  100% { opacity: 1; transform: none; }
-}
+.carrusel-flecha { position: absolute; top: 45%; transform: translateY(-50%); z-index: 2; border: 0; background: none; color: var(--papel); font-size: 28px; cursor: pointer; padding: 8px 4px; }
+.carrusel-flecha.izq { left: 0; } .carrusel-flecha.der { right: 0; }
+.carrusel-puntos { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; min-height: 40px; margin-top: 6px; }
+.carrusel-puntos button { border: 0; background: none; cursor: pointer; line-height: 1; font-size: 30px; color: var(--papel); opacity: .5; transition: all .2s; }
+.carrusel-puntos button.activo { opacity: 1; font-size: 40px; }
+.carrusel-contador { align-self: center; letter-spacing: .2em; font-size: 14px; }
 
 [data-aos^="flip"] { backface-visibility: hidden; }
