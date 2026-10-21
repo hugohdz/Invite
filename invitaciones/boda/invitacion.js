@@ -23,7 +23,7 @@
 
   let evento = null;
   let invitado = null;
-  let fotosDrive = null; // { invitacion, galeria, hospedaje: [{ id, nombre, nota }] } de Google Drive
+  let fotosDrive = null; // { invitacion, galeria, hospedaje: [{ id, nombre, nota, enfoque }] } de Google Drive
 
   // ---------- Carga de datos ----------
   async function obtener(url) {
@@ -346,24 +346,37 @@
   }
 
   // ---------- Fotos ----------
-  let fotos = [];   // fondos de las secciones (grupo "invitacion")
-  let galeria = []; // carrusel de la galería: [{ url, nota }]
+  let fotos = [];   // fondos de las secciones (grupo "invitacion"): [{ url, enfoque }]
+  let galeria = []; // carrusel de la galería: [{ url, nota, enfoque }]
 
   // Imagen de Drive al ancho pedido (la foto debe estar compartida con "cualquier persona con el enlace").
   const urlDrive = (id, ancho) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${ancho}`;
 
+  // Encuadre elegido en el panel: enfoque = "x y zoom" (el punto de la foto que queda a la vista, en %,
+  // y cuánto se acerca). El CSS lo usa en object-position y en el scale. Vacío = el encuadre normal.
+  function encuadrar(img, enfoque) {
+    const n = String(enfoque || "").trim().split(/\s+/).map(Number);
+    if (n.length >= 2 && n.every(Number.isFinite)) {
+      img.style.setProperty("--enfoque", `${n[0]}% ${n[1]}%`);
+      img.style.setProperty("--zoom", n[2] || 1);
+    } else {
+      img.style.removeProperty("--enfoque");
+      img.style.removeProperty("--zoom");
+    }
+  }
+
   async function cargarFotos() {
     if (fotosDrive && fotosDrive.invitacion) {
-      fotos = fotosDrive.invitacion.map((f) => urlDrive(f.id, 2000));
-      galeria = (fotosDrive.galeria || []).map((f) => ({ url: urlDrive(f.id, 1200), nota: f.nota || "" }));
+      fotos = fotosDrive.invitacion.map((f) => ({ url: urlDrive(f.id, 2000), enfoque: f.enfoque || "" }));
+      galeria = (fotosDrive.galeria || []).map((f) => ({ url: urlDrive(f.id, 1200), nota: f.nota || "", enfoque: f.enfoque || "" }));
     } else {
       try {
         const lista = await obtener(`${RAIZ}api/fotos`); // modo local (servidor.py)
-        fotos = lista.map((f) => RAIZ + f.replace(/^\//, ""));
+        fotos = lista.map((f) => ({ url: RAIZ + f.replace(/^\//, ""), enfoque: "" }));
       } catch {
         fotos = [];
       }
-      galeria = fotos.map((url) => ({ url, nota: "" }));
+      galeria = fotos.map((f) => ({ ...f, nota: "" }));
     }
     ponerFotosSecciones();
     if (!galeria.length || !activa("galeria")) return;
@@ -380,7 +393,8 @@
         return;
       }
       const n = img.dataset.foto === "ultima" ? fotos.length - 1 : Number(img.dataset.foto) % fotos.length;
-      img.src = fotos[n];
+      img.src = fotos[n].url;
+      encuadrar(img, fotos[n].enfoque);
       img.addEventListener("load", refrescarAOS, { once: true });
     });
     document.querySelectorAll(".dividida-foto").forEach((div, i) => {
@@ -395,11 +409,14 @@
   let hoteles = [];
   let hotelActual = 0;
 
+  // -> { url, enfoque } o null
   function fotoDeHotel(h) {
     const f = String(h.foto || "").trim();
-    if (/^https?:\/\//i.test(f)) return f;
-    if (/^\d+$/.test(f)) return fotos[Number(f) - 1] || ""; // versión anterior: número de foto
-    return /^[\w-]{20,}$/.test(f) ? urlDrive(f, 1600) : "";
+    if (/^https?:\/\//i.test(f)) return { url: f, enfoque: "" };
+    if (/^\d+$/.test(f)) return fotos[Number(f) - 1] || null; // versión anterior: número de foto
+    if (!/^[\w-]{20,}$/.test(f)) return null;
+    const drive = ((fotosDrive && fotosDrive.hospedaje) || []).find((x) => x.id === f);
+    return { url: urlDrive(f, 1600), enfoque: drive ? drive.enfoque || "" : "" };
   }
 
   function iniciarHospedaje() {
@@ -414,10 +431,13 @@
       img.alt = "";
       lado.appendChild(img);
     }
-    const porDefecto = img.getAttribute("src") || "";
+    const src = img.getAttribute("src") || "";
+    const porDefecto = src ? { url: src, enfoque: (fotos[6 % fotos.length] || {}).enfoque || "" } : null;
     img.addEventListener("load", () => { img.classList.remove("cambiando"); refrescarAOS(); });
     // Enlace que no es una imagen (por ejemplo, una página de Instagram): se usa la foto de la sección.
-    img.addEventListener("error", () => { if (porDefecto && img.getAttribute("src") !== porDefecto) img.src = porDefecto; });
+    img.addEventListener("error", () => {
+      if (porDefecto && img.getAttribute("src") !== porDefecto.url) { img.src = porDefecto.url; encuadrar(img, porDefecto.enfoque); }
+    });
 
     const mostrar = (i, hacia) => {
       hotelActual = (i + hoteles.length) % hoteles.length;
@@ -438,9 +458,9 @@
       // La foto de la sección cambia a la del hotel (si tiene).
       const foto = fotoDeHotel(h) || porDefecto;
       lado.hidden = !foto;
-      if (foto && img.getAttribute("src") !== foto) {
+      if (foto && img.getAttribute("src") !== foto.url) {
         img.classList.add("cambiando");
-        setTimeout(() => { img.src = foto; }, hacia ? 300 : 0);
+        setTimeout(() => { img.src = foto.url; encuadrar(img, foto.enfoque); }, hacia ? 300 : 0);
       }
     };
 
@@ -598,6 +618,7 @@
 
   function mostrarFoto(i) {
     imgCarrusel.src = galeria[i].url;
+    encuadrar(imgCarrusel, galeria[i].enfoque);
     imgCarrusel.alt = galeria[i].nota || `Foto ${i + 1}`;
     notaCarrusel.textContent = galeria[i].nota;
     new Image().src = galeria[(i + 1) % galeria.length].url; // la siguiente ya queda cargada

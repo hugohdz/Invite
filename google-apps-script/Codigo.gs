@@ -7,7 +7,7 @@
  *   - "Invitados":      id | nombre | pases | telefono | ninos   <- panel (menú Invitados) o a mano
  *                       (pases = adultos; ninos = lugares para niños)
  *   - "Confirmaciones": la llena la invitación cuando alguien confirma (no la edites a mano)
- *   - "Fotos":          id | grupo | nombre | nota   <- orden y notas de las fotos (panel, menú Fotos)
+ *   - "Fotos":          id | grupo | nombre | nota | enfoque   <- orden, notas y encuadre de las fotos (panel, menú Fotos)
  *
  * Las fotos viven en una carpeta de tu Google Drive ("fotosinvitacion", se crea sola al subir
  * la primera desde el panel, menú Fotos) compartida como "cualquier persona con el enlace".
@@ -39,7 +39,7 @@ const HOJA_FOTOS = "Fotos";
 const COL_EVENTO = ["campo", "valor"];
 const COL_INVITADOS = ["id", "nombre", "pases", "telefono", "ninos"];
 const COL_CONFIRMACIONES = ["id", "nombre", "asiste", "personas", "fecha", "mensaje"];
-const COL_FOTOS = ["id", "grupo", "nombre", "nota"];
+const COL_FOTOS = ["id", "grupo", "nombre", "nota", "enfoque"];
 const NOMBRE_CARPETA_FOTOS = "fotosinvitacion";
 // Campos del evento que son listas u objetos: se guardan como JSON en la columna "valor".
 const CAMPOS_LISTA = ["padres", "lugares", "itinerario", "regalos", "hospedaje"];
@@ -61,7 +61,7 @@ function hoja_(nombre, columnas) {
     h.getRange(1, 1, 1, columnas.length).setFontWeight("bold");
     if (nombre === HOJA_INVITADOS) { h.getRange("A:A").setNumberFormat("@"); h.getRange("D:D").setNumberFormat("@"); }
     if (nombre === HOJA_EVENTO) h.getRange("A:B").setNumberFormat("@"); // sin conversiones automáticas (fechas)
-    if (nombre === HOJA_FOTOS) h.getRange("A:D").setNumberFormat("@");
+    if (nombre === HOJA_FOTOS) h.getRange("A:E").setNumberFormat("@");
   }
   return h;
 }
@@ -221,7 +221,9 @@ function confirmar_(d) {
 //   invitacion -> fondos de las secciones (1 = portada, 2 = cuenta regresiva… la última = confirmación)
 //   galeria    -> el carrusel de la galería; cada foto puede llevar una nota
 //   hospedaje  -> fotos de los hoteles (cada hotel elige la suya en Evento > Hospedaje)
-// El orden y las notas se guardan en la hoja "Fotos" (id | grupo | nombre | nota), en orden.
+// El orden y las notas se guardan en la hoja "Fotos" (id | grupo | nombre | nota | enfoque), en orden.
+// enfoque = "x y zoom" (p. ej. "50 30 1.2"): el punto de la foto que debe quedar a la vista, en %,
+// y cuánto se acerca. Vacío = como venía (centrada, sin acercar).
 // El id de la carpeta principal se guarda en las propiedades del script.
 const GRUPOS_FOTOS = ["invitacion", "galeria", "hospedaje"];
 const props_ = () => PropertiesService.getScriptProperties();
@@ -268,7 +270,7 @@ function imagenes_(carpeta) {
 }
 
 /**
- * Fotos de cada grupo en orden: { invitacion: [{ id, nombre, nota }], galeria: [...], hospedaje: [...] }.
+ * Fotos de cada grupo en orden: { invitacion: [{ id, nombre, nota, enfoque }], galeria: [...], hospedaje: [...] }.
  * Primero el orden de la hoja "Fotos"; las que se subieron directo a Drive van al final de su grupo,
  * por nombre (2.jpg antes que 10.jpg). Se guarda en caché 5 minutos para que la invitación no espere a Drive.
  */
@@ -294,17 +296,18 @@ function leerFotos_() {
   });
 
   const hoja = hoja_(HOJA_FOTOS, COL_FOTOS);
-  let filas = hoja.getDataRange().getValues().slice(1).map((f) => ({ id: String(f[0]).trim(), nota: String(f[3] || "") }));
+  let filas = hoja.getDataRange().getValues().slice(1)
+    .map((f) => ({ id: String(f[0]).trim(), nota: String(f[3] || ""), enfoque: String(f[4] || "") }));
   // Primera vez con la hoja: se respeta el orden que guardaba la versión anterior.
-  if (!filas.length) filas = ordenAnterior_().map((id) => ({ id, nota: "" }));
+  if (!filas.length) filas = ordenAnterior_().map((id) => ({ id, nota: "", enfoque: "" }));
 
   const vistos = new Set();
-  const agregar = (id, nota) => {
+  const agregar = (id, nota, enfoque) => {
     const a = archivos[id];
     vistos.add(id);
-    grupos[a.grupo].push({ id, nombre: a.archivo.getName(), nota: nota || "" });
+    grupos[a.grupo].push({ id, nombre: a.archivo.getName(), nota: nota || "", enfoque: enfoque || "" });
   };
-  filas.forEach((f) => { if (archivos[f.id] && !vistos.has(f.id)) agregar(f.id, f.nota); });
+  filas.forEach((f) => { if (archivos[f.id] && !vistos.has(f.id)) agregar(f.id, f.nota, f.enfoque); });
   Object.keys(archivos).filter((id) => !vistos.has(id))
     .sort((a, b) => archivos[a].archivo.getName().localeCompare(archivos[b].archivo.getName(), "es", { numeric: true }))
     .forEach((id) => { compartir_(archivos[id].archivo); agregar(id, ""); }); // las que se arrastraron directo a Drive
@@ -319,8 +322,12 @@ function ordenAnterior_() {
 
 /** Escribe la hoja "Fotos" (solo si cambió) y actualiza la caché. */
 function guardarFotos_(grupos) {
-  const filas = GRUPOS_FOTOS.flatMap((g) => grupos[g].map((f) => [f.id, g, f.nombre, f.nota]));
+  const filas = GRUPOS_FOTOS.flatMap((g) => grupos[g].map((f) => [f.id, g, f.nombre, f.nota, f.enfoque || ""]));
   const hoja = hoja_(HOJA_FOTOS, COL_FOTOS);
+  if (!hoja.getRange(1, 5).getValue()) { // hojas creadas antes del encuadre
+    hoja.getRange(1, 5).setValue("enfoque").setFontWeight("bold");
+    hoja.getRange("E:E").setNumberFormat("@");
+  }
   const actuales = hoja.getDataRange().getValues().slice(1).map((f) => f.map(String));
   if (JSON.stringify(actuales) !== JSON.stringify(filas)) {
     if (hoja.getLastRow() > 1) hoja.getRange(2, 1, hoja.getLastRow() - 1, COL_FOTOS.length).clearContent();
@@ -345,7 +352,7 @@ function subirFoto_(d) {
   compartir_(archivo);
   const grupos = leerFotos_();
   if (!grupos[grupo].some((f) => f.id === archivo.getId())) { // la caché aún no la conocía
-    grupos[grupo].push({ id: archivo.getId(), nombre: archivo.getName(), nota: "" });
+    grupos[grupo].push({ id: archivo.getId(), nombre: archivo.getName(), nota: "", enfoque: "" });
     guardarFotos_(grupos);
   }
   return { id: archivo.getId(), nombre: archivo.getName(), grupo };
@@ -374,6 +381,19 @@ function guardarNota_(id, nota) {
   const foto = GRUPOS_FOTOS.flatMap((g) => grupos[g]).find((f) => f.id === id);
   if (!foto) throw new Error("Foto no encontrada");
   foto.nota = texto_(nota, 300).replace(/[\r\n]+/g, " ");
+  guardarFotos_(grupos);
+}
+
+/** enfoque = "x y zoom": x, y de 0 a 100 (%), zoom de 1 a 3. "" lo quita. */
+function guardarEnfoque_(id, enfoque) {
+  const grupos = leerFotos_();
+  const foto = GRUPOS_FOTOS.flatMap((g) => grupos[g]).find((f) => f.id === id);
+  if (!foto) throw new Error("Foto no encontrada");
+  const n = String(enfoque || "").trim().split(/\s+/).map(Number);
+  const limitar = (v, min, max, def) => (isFinite(v) ? Math.round(Math.min(max, Math.max(min, v)) * 100) / 100 : def);
+  foto.enfoque = n.length >= 2 && isFinite(n[0]) && isFinite(n[1])
+    ? [limitar(n[0], 0, 100, 50), limitar(n[1], 0, 100, 50), limitar(n[2], 1, 3, 1)].join(" ")
+    : "";
   guardarFotos_(grupos);
 }
 
@@ -417,6 +437,7 @@ function doGet(e) {
 //   { accion: "borrarFoto",      clave, id }                  -> panel
 //   { accion: "ordenarFotos",    clave, grupo, ids: [...] }   -> panel
 //   { accion: "notaFoto",        clave, id, nota }            -> panel (nota bajo la foto en la galería)
+//   { accion: "enfoqueFoto",     clave, id, enfoque }         -> panel (encuadre: "x y zoom")
 //   (grupo = "invitacion", "galeria" u "hospedaje")
 function doPost(e) {
   let d;
@@ -439,6 +460,7 @@ function doPost(e) {
     if (accion === "borrarFoto") { borrarFoto_(d.id); return json_({ ok: true, ...datosFotos_() }); }
     if (accion === "ordenarFotos") { ordenarFotos_(d.grupo, Array.isArray(d.ids) ? d.ids : []); return json_({ ok: true, ...datosFotos_() }); }
     if (accion === "notaFoto") { guardarNota_(String(d.id), d.nota); return json_({ ok: true, ...datosFotos_() }); }
+    if (accion === "enfoqueFoto") { guardarEnfoque_(String(d.id), d.enfoque); return json_({ ok: true, ...datosFotos_() }); }
     return json_({ error: "Acción desconocida" });
   } catch (err) {
     return json_({ error: err.message });
