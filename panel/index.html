@@ -494,10 +494,21 @@
       }).join("") || `<tr><td colspan="7" class="sub">Sin resultados</td></tr>`;
     }
 
+    // Mensaje para enviar la invitación por WhatsApp (campo "mensajeWhatsapp" del evento).
+    // {nombre}, {enlace} y {pases} se cambian por los datos de cada invitado; si el texto
+    // no trae {enlace}, el enlace se agrega al final para que nunca falte.
+    const MENSAJE_WA = "Hola {nombre}, te compartimos nuestra invitación: {enlace}";
+    function mensajeWhatsApp(f, link) {
+      let msg = String(evento.mensajeWhatsapp || "").trim() || MENSAJE_WA;
+      if (!msg.includes("{enlace}")) msg += "\n{enlace}";
+      const datos = { nombre: f.nombre, enlace: link, pases: lugares(f) };
+      return msg.replace(/\{(nombre|enlace|pases)\}/g, (_, k) => datos[k]);
+    }
+
     function botonesEnlace(f) {
       const link = enlace(f.id);
       const wa = f.telefono
-        ? `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${esc(f.telefono)}?text=${encodeURIComponent(`Hola ${f.nombre}, te compartimos nuestra invitación: ${link}`)}">WhatsApp</a>`
+        ? `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${esc(f.telefono)}?text=${encodeURIComponent(mensajeWhatsApp(f, link))}">WhatsApp</a>`
         : "";
       return `<div class="acciones"><button class="btn" type="button" data-copiar="${esc(link)}">Copiar enlace</button>${wa}</div>`;
     }
@@ -533,6 +544,8 @@
       { titulo: "Textos", campos: [
         { k: "bienvenida", label: "Mensaje de bienvenida", tipo: "textarea", ph: "El día más importante de\nnuestras vidas ha llegado", ancho: true },
         { k: "frase", label: "Frase", tipo: "textarea", ancho: true },
+        { k: "mensajeWhatsapp", label: "Mensaje para enviar la invitación por WhatsApp", tipo: "textarea", ph: "Hola {nombre}, te compartimos nuestra invitación: {enlace}", ancho: true,
+          ayuda: "Se usa en el botón WhatsApp de cada invitado. {nombre} = nombre del invitado, {enlace} = su invitación, {pases} = lugares. Si no pones {enlace}, se agrega al final." },
       ] },
       { titulo: "Padres", parte: "padres", campos: [
         { k: "tituloPadres", label: "Título de la sección", ph: "Con la bendición de nuestros padres", ancho: true },
@@ -540,7 +553,9 @@
         { k: "titulo", label: "Título del grupo", ph: "Padres de la novia" },
         { k: "nombres", label: "Nombres (uno por línea)", tipo: "textarea", lineas: true },
       ] } },
-      { titulo: "Ubicaciones", parte: "lugares", lista: { k: "lugares", nombre: "ubicación", campos: [
+      { titulo: "Ubicaciones", parte: "lugares", campos: [
+        { k: "tituloLugares", label: "Título de la sección", ph: "¿Dónde y cuándo?", ancho: true },
+      ], lista: { k: "lugares", nombre: "ubicación", campos: [
         { k: "titulo", label: "Título", ph: "Ceremonia" },
         { k: "lugar", label: "Lugar", ph: "Jardín Las Rubelinas" },
         { k: "hora", label: "Hora", ph: "3:00 p. m." },
@@ -698,6 +713,7 @@
         const res = await enviar({ accion: "guardarEvento", evento: datos });
         evento = res.evento;
         pintarFormEvento();
+        renderConfirmaciones(); renderInvitados(); // los botones de WhatsApp usan el mensaje nuevo
         $("evento-migrar").hidden = true;
         // El script anterior ignora los campos que no conoce (secciones, hospedaje, ciudad del clima).
         if (!("secciones" in res.evento)) {

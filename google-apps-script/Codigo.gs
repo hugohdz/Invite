@@ -47,8 +47,8 @@ const CAMPOS_OBJETO = ["secciones"]; // { regalos: false, ... } = secciones ocul
 // Campos que acepta el formulario del panel (cualquier otro se ignora).
 const CAMPOS_EVENTO = [
   "tema", "eyebrow", "nombre1", "nombre2", "iniciales", "fecha", "whatsapp",
-  "bienvenida", "frase", "tituloPadres", "vestimenta", "vestimentaNota", "tituloFotos",
-  "rsvpLimite", "cuentaBanco", "ciudadClima", ...CAMPOS_LISTA, ...CAMPOS_OBJETO,
+  "bienvenida", "frase", "tituloPadres", "tituloLugares", "vestimenta", "vestimentaNota", "tituloFotos",
+  "rsvpLimite", "mensajeWhatsapp", "cuentaBanco", "ciudadClima", ...CAMPOS_LISTA, ...CAMPOS_OBJETO,
 ];
 
 function hoja_(nombre, columnas) {

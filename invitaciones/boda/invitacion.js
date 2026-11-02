@@ -162,6 +162,7 @@
     txt("fecha-corta", fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }).replace(/ de /g, " "));
     txt("iniciales-itinerario", d.nombre2 ? `${d.nombre1[0]} & ${d.nombre2[0]}` : d.iniciales);
     txt("txt-padres", d.tituloPadres);
+    txt("txt-lugares", d.tituloLugares || "¿Dónde y cuándo?");
     txt("vestimenta", d.vestimenta);
     txt("vestimenta-nota", d.vestimentaNota);
     txt("txt-fotos", d.tituloFotos || "Galería");
@@ -340,7 +341,9 @@
       document.querySelectorAll("[data-aos]").forEach((n) => n.removeAttribute("data-aos"));
       return;
     }
-    AOS.init({ offset: 200, duration: 1300, once: false });
+    // offset bajo: el texto aparece en cuanto se asoma por abajo de la pantalla, sin tener
+    // que centrar la sección (así se ven la foto y el texto a la vez en el celular).
+    AOS.init({ offset: 40, duration: 900, once: false });
     addEventListener("load", refrescarAOS);
     if (document.fonts) document.fonts.ready.then(refrescarAOS);
   }
