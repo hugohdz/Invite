@@ -47,6 +47,7 @@
     let pedirInvitado;
     if (publicado()) {
       txt("sobre-para", "Cargando…");
+      $("sobre-cta").classList.add("oculto");
       const r = await obtener(`${evento.confirmacionesUrl}?accion=inicio&id=${encodeURIComponent(idInvitado)}`).catch(() => null);
       if (r && r.evento && Object.keys(r.evento).length) {
         evento = { ...evento, ...r.evento, confirmacionesUrl: evento.confirmacionesUrl };
@@ -57,7 +58,8 @@
       if (r && "evento" in r) {
         pedirInvitado = Promise.resolve(r.invitado ? { ...r.invitado, confirmacion: r.confirmacion || null } : null);
       }
-      txt("sobre-para", "Toca el sello para abrir");
+      txt("sobre-para", "");
+      $("sobre-cta").classList.remove("oculto");
     }
     // evento.json ya solo guarda la URL de Google: sin respuesta de Google no hay qué mostrar.
     if (!evento.nombre1) {
@@ -86,6 +88,7 @@
   }
 
   function mostrarSinConexion() {
+    $("sobre-cta").classList.add("oculto");
     txt("sobre-para", "");
     const caja = document.createElement("div");
     caja.style.cssText = "position:fixed;inset:auto 16px 12vh;z-index:11;text-align:center;font-family:Montserrat,sans-serif;color:#4a4036";

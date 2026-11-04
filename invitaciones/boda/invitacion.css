@@ -62,10 +62,22 @@ img { display: block; }
 }
 @keyframes latir { 50% { transform: translate(-50%, -50%) scale(1.06); } }
 .sobre-hint {
-  position: absolute; left: 0; right: 0; top: calc(62% + 64px); text-align: center;
-  font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--suave);
+  position: absolute; left: 16px; right: 16px; top: calc(62% + 64px); text-align: center;
   transition: opacity .3s;
 }
+.sobre-hint p { margin: 0; }
+.sobre-para {
+  font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--suave);
+}
+.sobre-para:empty { display: none; }
+.sobre-cta {
+  margin-top: 14px !important;
+  font: italic 17px/1.35 "Bodoni Moda", serif; color: var(--tinta);
+  animation: invitar 2.4s ease-in-out infinite;
+  transition: opacity .3s;
+}
+.sobre-cta.oculto { opacity: 0; animation: none; }
+@keyframes invitar { 50% { opacity: .55; } }
 .sobre.abierto { opacity: 0; visibility: hidden; }
 .sobre.abierto .sobre-solapa { transform: translateY(-105%); }
 .sobre.abierto .sello { opacity: 0; transform: translate(-50%, -50%) scale(.4); animation: none; }
