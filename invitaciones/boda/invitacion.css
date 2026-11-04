@@ -70,18 +70,27 @@ img { display: block; }
   font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--suave);
 }
 .sobre-para:empty { display: none; }
+/* Etiqueta roja sobre el sello: indica dónde dar clic */
 .sobre-cta {
-  margin-top: 14px !important;
-  font: italic 17px/1.35 "Bodoni Moda", serif; color: var(--tinta);
-  animation: invitar 2.4s ease-in-out infinite;
+  position: absolute; left: 50%; top: calc(62% - 38px); z-index: 1;
+  transform: translate(-50%, -100%);
+  padding: 6px 14px; border-radius: 6px;
+  background: #c62828; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  font: 600 13px/1 "Montserrat", sans-serif; letter-spacing: .12em; text-transform: uppercase;
+  white-space: nowrap; pointer-events: none;
+  animation: invitar 1.6s ease-in-out infinite;
   transition: opacity .3s;
 }
+.sobre-cta::after {
+  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border: 7px solid transparent; border-top-color: #c62828; border-bottom: 0;
+}
 .sobre-cta.oculto { opacity: 0; animation: none; }
-@keyframes invitar { 50% { opacity: .55; } }
+@keyframes invitar { 50% { transform: translate(-50%, calc(-100% - 6px)); } }
 .sobre.abierto { opacity: 0; visibility: hidden; }
 .sobre.abierto .sobre-solapa { transform: translateY(-105%); }
 .sobre.abierto .sello { opacity: 0; transform: translate(-50%, -50%) scale(.4); animation: none; }
-.sobre.abierto .sobre-hint { opacity: 0; }
+.sobre.abierto .sobre-hint, .sobre.abierto .sobre-cta { opacity: 0; }
 
 /* ---------- Textos comunes ---------- */
 .invitacion { padding-bottom: 80px; }
